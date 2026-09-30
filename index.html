@@ -44,8 +44,8 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
 <div id="toast" class="toast"></div>
 
 <script>
-const KEY="kundenAngebot_v2";
-let data=JSON.parse(localStorage.getItem(KEY)||"[]");
+const KEY="kundenAngebot_v3";
+let data=JSON.parse(localStorage.getItem(KEY)||localStorage.getItem("kundenAngebot_v2")||"[]");
 let currentView="home", editId=null;
 
 function save(){localStorage.setItem(KEY,JSON.stringify(data));}
@@ -65,11 +65,12 @@ function render(){
 }
 
 function home(){
- const open=data.filter(x=>!x.offerCreated).length, done=data.filter(x=>x.offerCreated).length;
+ const term=data.filter(x=>x.purpose==="termin").length, offers=data.filter(x=>x.purpose==="angebot").length, done=data.filter(x=>x.offerCreated).length;
  return `<div class="grid">
- <div class="stat"><span>Offene Aufträge</span><b>${open}</b></div>
- <div class="stat"><span>Angebote erstellt</span><b>${done}</b></div>
+ <div class="stat"><span>Terminvereinbarungen</span><b>${term}</b></div>
+ <div class="stat"><span>Angebotsaufnahmen</span><b>${offers}</b></div>
  </div>
+ <div class="card"><div class="row"><span class="badge">${done} Angebote erstellt</span><span class="small">${data.length} Datensätze insgesamt</span></div></div>
  <div class="card"><div class="row"><h2 style="margin:0">Letzte Aufträge</h2><span class="spacer"></span><button class="secondary" onclick="showView('new')">＋ Neu</button></div>
  ${data.length?data.slice().sort((a,b)=>b.createdAt-a.createdAt).slice(0,8).map(itemRow).join(""):`<p class="small">Noch keine Aufträge gespeichert.</p>`}</div>
  <div class="card"><b>Datensicherung</b><p class="small">Die Daten liegen lokal auf diesem iPhone. Exportiere regelmäßig eine Sicherung.</p>
@@ -83,44 +84,69 @@ function customers(){
 }
 function filterList(q){q=q.toLowerCase();document.querySelectorAll("#list .item").forEach(e=>e.style.display=e.dataset.search.includes(q)?"":"none");}
 function itemRow(x){
- const q=[x.customer,x.phone,x.address,x.task,x.other].join(" ").toLowerCase();
+ const q=[x.customer,x.phone,x.email,x.address,x.task,x.considerations,x.access,x.other,x.purpose].join(" ").toLowerCase();
+ const purpose=x.purpose==="termin"?"Terminvereinbarung":"Angebot";
  return `<div class="item" data-search="${esc(q)}" onclick="showView('detail','${x.id}')">
- <div class="row"><h3>${esc(x.customer||"Ohne Kundennamen")}</h3><span class="spacer"></span><span class="badge ${x.offerCreated?"done":""}">${x.offerCreated?"Angebot erstellt":"Offen"}</span></div>
- <div class="meta">${esc(x.address||"Keine Adresse")} · ${x.date?new Date(x.date).toLocaleDateString("de-DE"):"kein Termin"}<br>${esc(x.task||"Keine Tätigkeitsbeschreibung")}</div></div>`;
+ <div class="row"><h3>${esc(x.customer||"Ohne Kundennamen")}</h3><span class="spacer"></span><span class="badge ${x.offerCreated?"done":""}">${purpose}</span></div>
+ <div class="meta">${esc(x.address||"Keine Adresse")} ${x.date?"· "+new Date(x.date).toLocaleDateString("de-DE"):""}<br>${esc(x.task||"Keine Tätigkeitsbeschreibung")}</div></div>`;
 }
 
 function form(x){
- x=x||{id:crypto.randomUUID(),customer:"",phone:"",address:"",date:"",task:"",hab:false,stammholz:false,aeste:false,vra:false,other:"",offerCreated:false,photos:[],lat:null,lon:null,createdAt:Date.now()};
- return `<div class="card"><div class="row"><h2 style="margin:0">${editId?"Auftrag bearbeiten":"Neuer Auftrag"}</h2><span class="spacer"></span><button class="secondary" onclick="showView(editId?'detail':'home',editId)">Abbrechen</button></div>
- <label>Kunde *</label><input id="f_customer" value="${esc(x.customer)}" autocomplete="name">
- <label>Telefon</label><input id="f_phone" value="${esc(x.phone)}" type="tel" autocomplete="tel">
- <label>Adresse</label><input id="f_address" value="${esc(x.address)}" autocomplete="street-address">
+ x=x||{id:crypto.randomUUID(),purpose:"termin",customer:"",phone:"",email:"",address:"",date:"",task:"",considerations:"",access:"",accessType:"",hab:false,skt:false,stammholz:false,aeste:false,hackschnitzel:false,disposalAll:false,other:"",offerCreated:false,photos:[],lat:null,lon:null,createdAt:Date.now()};
+ // Migration für ältere Datensätze
+ x.purpose=x.purpose||"angebot"; x.email=x.email||""; x.considerations=x.considerations||""; x.access=x.access||""; x.accessType=x.accessType||""; x.skt=!!x.skt; x.disposalAll=!!x.disposalAll; x.hackschnitzel=!!x.hackschnitzel;
+ return `<div class="card"><div class="row"><h2 style="margin:0">${editId?"Datensatz bearbeiten":"Neuer Datensatz"}</h2><span class="spacer"></span><button class="secondary" onclick="showView(editId?'detail':'home',editId)">Abbrechen</button></div>
+ <label>Wofür werden die Daten erfasst? *</label>
+ <div class="checks" style="grid-template-columns:1fr 1fr">
+  <label class="check"><input id="f_purpose_termin" name="purpose" type="radio" value="termin" ${x.purpose==="termin"?"checked":""}> Terminvereinbarung</label>
+  <label class="check"><input id="f_purpose_angebot" name="purpose" type="radio" value="angebot" ${x.purpose==="angebot"?"checked":""}> Angebot</label>
+ </div>
+ <label>Kundenname *</label><input id="f_customer" value="${esc(x.customer)}" autocomplete="name">
+ <label>Adresse *</label><input id="f_address" value="${esc(x.address)}" autocomplete="street-address">
  <div class="row" style="margin-top:8px"><button class="secondary" onclick="getLocation()">📍 Standort übernehmen</button><button class="secondary" onclick="openMaps()">🗺️ Adresse in Karten</button></div>
- <label>Termin</label><input id="f_date" value="${esc(x.date)}" type="datetime-local">
- <label>Was ist zu tun?</label><textarea id="f_task">${esc(x.task)}</textarea>
- <label>Leistungen / Entsorgung</label>
+ <div class="small" id="locationStatus" style="margin-top:6px">${x.lat&&x.lon?`Standort gespeichert: ${x.lat.toFixed(5)}, ${x.lon.toFixed(5)}`:"Standort noch nicht übernommen"}</div>
+ <div class="grid">
+  <div><label>Telefon *</label><input id="f_phone" value="${esc(x.phone)}" type="tel" autocomplete="tel"></div>
+  <div><label>E-Mail *</label><input id="f_email" value="${esc(x.email)}" type="email" autocomplete="email"></div>
+ </div>
+ <label>Termin (optional)</label><input id="f_date" value="${esc(x.date)}" type="datetime-local">
+ <label>Was ist zu tun? *</label><textarea id="f_task">${esc(x.task)}</textarea>
+ <label>Was ist zu bedenken?</label><textarea id="f_considerations">${esc(x.considerations)}</textarea>
+ <label>Zugang</label><textarea id="f_access" placeholder="z. B. schmaler Zugang, Hinterhof, Zufahrt, Leiterzugang ...">${esc(x.access)}</textarea>
  <div class="checks">
- <label class="check"><input id="f_hab" type="checkbox" ${x.hab?"checked":""}> HAB</label>
- <label class="check"><input id="f_stamm" type="checkbox" ${x.stammholz?"checked":""}> Stammholz</label>
- <label class="check"><input id="f_aeste" type="checkbox" ${x.aeste?"checked":""}> Äste</label>
- <label class="check"><input id="f_vra" type="checkbox" ${x.vra?"checked":""}> VRA</label>
+  <label class="check"><input id="f_skt" type="checkbox" ${x.skt?"checked":""}> SKT</label>
+  <label class="check"><input id="f_hab" type="checkbox" ${x.hab?"checked":""}> HAB</label>
+ </div>
+ <label>Entsorgung</label>
+ <div class="checks">
+  <label class="check"><input id="f_disposalAll" type="checkbox" ${x.disposalAll?"checked":""} onchange="toggleDisposal(this)"> Alles</label>
+  <label class="check"><input id="f_stamm" type="checkbox" ${x.stammholz?"checked":""}> Stammholz</label>
+  <label class="check"><input id="f_aeste" type="checkbox" ${x.aeste?"checked":""}> Astwerk</label>
+  <label class="check"><input id="f_hackschnitzel" type="checkbox" ${x.hackschnitzel?"checked":""}> Hackschnitzel</label>
  </div>
  <label>Sonstiges</label><textarea id="f_other">${esc(x.other)}</textarea>
- <label>Fotos</label>
+ <label>Foto machen</label>
  <input id="f_photos" type="file" accept="image/*" capture="environment" multiple>
  <div id="photoPreview" class="photo-grid">${(x.photos||[]).map(p=>`<img src="${p}">`).join("")}</div>
- <label class="check" style="margin-top:12px"><input id="f_offer" type="checkbox" ${x.offerCreated?"checked":""}> Angebot wurde erstellt</label>
- <hr><div class="row"><button class="primary" onclick='saveForm(${JSON.stringify(x).replace(/</g,"\\u003c")})'>💾 Auftrag speichern</button>${editId?`<button class="danger" onclick="deleteItem('${x.id}')">Löschen</button>`:""}</div>
+ ${x.purpose==="angebot"?`<label class="check" style="margin-top:12px"><input id="f_offer" type="checkbox" ${x.offerCreated?"checked":""}> Angebot wurde erstellt</label>`:`<input id="f_offer" type="checkbox" class="hidden" ${x.offerCreated?"checked":""}>`}
+ <hr><div class="row"><button class="primary" onclick='saveForm(${JSON.stringify(x).replace(/</g,"\\u003c")})'>💾 Daten speichern</button>${editId?`<button class="danger" onclick="deleteItem('${x.id}')">Löschen</button>`:""}</div>
  <p class="small">Die Daten werden direkt auf diesem iPhone gespeichert.</p></div>`;
 }
+function toggleDisposal(el){
+ if(el.checked){document.getElementById("f_stamm").checked=true;document.getElementById("f_aeste").checked=true;document.getElementById("f_hackschnitzel").checked=true;}
+}
 function collect(x){
- x.customer=document.getElementById("f_customer").value.trim(); x.phone=document.getElementById("f_phone").value.trim(); x.address=document.getElementById("f_address").value.trim();
- x.date=document.getElementById("f_date").value; x.task=document.getElementById("f_task").value.trim();
- x.hab=document.getElementById("f_hab").checked; x.stammholz=document.getElementById("f_stamm").checked; x.aeste=document.getElementById("f_aeste").checked; x.vra=document.getElementById("f_vra").checked;
- x.other=document.getElementById("f_other").value.trim(); x.offerCreated=document.getElementById("f_offer").checked; return x;
+ x.purpose=document.querySelector('input[name="purpose"]:checked')?.value||"termin";
+ x.customer=document.getElementById("f_customer").value.trim(); x.phone=document.getElementById("f_phone").value.trim(); x.email=document.getElementById("f_email").value.trim(); x.address=document.getElementById("f_address").value.trim();
+ x.date=document.getElementById("f_date")?.value||""; x.task=document.getElementById("f_task").value.trim();
+ x.considerations=document.getElementById("f_considerations").value.trim(); x.access=document.getElementById("f_access").value.trim();
+ x.skt=document.getElementById("f_skt").checked; x.hab=document.getElementById("f_hab").checked;
+ x.disposalAll=document.getElementById("f_disposalAll").checked; x.stammholz=document.getElementById("f_stamm").checked; x.aeste=document.getElementById("f_aeste").checked; x.hackschnitzel=document.getElementById("f_hackschnitzel").checked;
+ if(x.disposalAll){x.stammholz=x.aeste=x.hackschnitzel=true}
+ x.other=document.getElementById("f_other").value.trim(); x.offerCreated=document.getElementById("f_offer")?.checked||false; return x;
 }
 async function saveForm(x){
- x=collect(x); if(!x.customer){alert("Bitte einen Kundennamen eingeben.");return}
+ x=collect(x); if(window.__newLocation){x.lat=window.__newLocation.lat;x.lon=window.__newLocation.lon;window.__newLocation=null} if(!x.customer){alert("Bitte einen Kundennamen eingeben.");return} if(!x.address){alert("Bitte eine Adresse eingeben oder den Standort übernehmen.");return} if(!x.phone){alert("Bitte eine Telefonnummer eingeben.");return} if(!x.email){alert("Bitte eine E-Mail-Adresse eingeben.");return} if(!x.task){alert("Bitte beschreiben, was zu tun ist.");return}
  const files=[...document.getElementById("f_photos").files];
  if(files.length){x.photos=x.photos||[];for(const f of files){const b=await resizeImage(f);x.photos.push(b)}}
  const i=data.findIndex(y=>y.id===x.id); if(i>=0)data[i]=x;else data.push(x); save(); toast("Gespeichert"); showView("detail",x.id);
@@ -129,10 +155,14 @@ function resizeImage(file){return new Promise((res,rej)=>{const r=new FileReader
 function detail(id){
  const x=data.find(y=>y.id===id); if(!x){showView("home");return ""}
  return `<div class="card"><div class="row"><h2 style="margin:0">${esc(x.customer)}</h2><span class="spacer"></span><span class="badge ${x.offerCreated?"done":""}">${x.offerCreated?"Angebot erstellt":"Offen"}</span></div>
- <div class="meta">${esc(x.phone||"")} ${x.phone?`· <a href="tel:${esc(x.phone)}">Anrufen</a>`:""}<br>${esc(x.address||"")}</div>
+ <div class="meta">${esc(x.phone||"")} ${x.phone?`· <a href="tel:${esc(x.phone)}">Anrufen</a>`:""}<br>${esc(x.email||"")} ${x.email?`· <a href="mailto:${esc(x.email)}">E-Mail</a>`:""}<br>${esc(x.address||"")}</div>
+ <p><b>Erfassung für:</b> ${x.purpose==="termin"?"Terminvereinbarung":"Angebot"}</p>
  ${x.date?`<p><b>Termin:</b> ${new Date(x.date).toLocaleString("de-DE",{dateStyle:"medium",timeStyle:"short"})}</p>`:""}
- <hr><b>Aufgabe</b><p>${esc(x.task||"—")}</p>
- <b>Leistungen</b><p>${[x.hab&&"HAB",x.stammholz&&"Stammholz",x.aeste&&"Äste",x.vra&&"VRA"].filter(Boolean).join(" · ")||"Keine Auswahl"}</p>
+ <hr><b>Was ist zu tun?</b><p>${esc(x.task||"—")}</p>
+ ${x.considerations?`<b>Was ist zu bedenken?</b><p>${esc(x.considerations)}</p>`:""}
+ ${x.access?`<b>Zugang</b><p>${esc(x.access)}</p>`:""}
+ <b>Zugang / Technik</b><p>${[x.skt&&"SKT",x.hab&&"HAB"].filter(Boolean).join(" · ")||"Keine Auswahl"}</p>
+ <b>Entsorgung</b><p>${x.disposalAll?"Alles":[x.stammholz&&"Stammholz",x.aeste&&"Astwerk",x.hackschnitzel&&"Hackschnitzel"].filter(Boolean).join(" · ")||"Keine Auswahl"}</p>
  ${x.other?`<b>Sonstiges</b><p>${esc(x.other)}</p>`:""}
  ${x.photos?.length?`<b>Fotos</b><div class="photo-grid">${x.photos.map(p=>`<img src="${p}">`).join("")}</div>`:""}
  ${x.lat?`<p class="small">Standort gespeichert: ${x.lat.toFixed(5)}, ${x.lon.toFixed(5)}</p>`:""}
@@ -140,7 +170,7 @@ function detail(id){
 }
 function toggleOffer(id){const x=data.find(y=>y.id===id);x.offerCreated=!x.offerCreated;save();render()}
 function deleteItem(id){if(confirm("Diesen Auftrag wirklich löschen?")){data=data.filter(x=>x.id!==id);save();showView("customers");}}
-function getLocation(){if(!navigator.geolocation){alert("Standort ist auf diesem Gerät nicht verfügbar.");return} navigator.geolocation.getCurrentPosition(p=>{let x=data.find(y=>y.id===editId);if(!x){toast("Bitte zuerst speichern, dann Standort erneut übernehmen.");return}x.lat=p.coords.latitude;x.lon=p.coords.longitude;toast("Standort übernommen");},e=>alert("Standort konnte nicht ermittelt werden. Bitte Standortfreigabe für diese Web-App erlauben."),{enableHighAccuracy:true,timeout:10000})}
+function getLocation(){if(!navigator.geolocation){alert("Standort ist auf diesem Gerät nicht verfügbar.");return} navigator.geolocation.getCurrentPosition(p=>{let x=data.find(y=>y.id===editId); if(x){x.lat=p.coords.latitude;x.lon=p.coords.longitude;save()} else {window.__newLocation={lat:p.coords.latitude,lon:p.coords.longitude}}; const s=document.getElementById("locationStatus"); if(s)s.textContent=`Standort übernommen: ${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`; toast("Standort übernommen");},e=>alert("Standort konnte nicht ermittelt werden. Bitte Standortfreigabe für diese Web-App erlauben."),{enableHighAccuracy:true,timeout:10000})}
 function openMaps(address=""){if(!address){address=document.getElementById("f_address")?.value||""} if(!address){alert("Bitte zuerst eine Adresse eingeben.");return}location.href="https://maps.apple.com/?address="+encodeURIComponent(address)}
 function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="KundenAngebot-Sicherung-"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(a.href)}
 function importData(file){if(!file)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d))throw 0;if(confirm("Import ersetzt die aktuell gespeicherten Daten. Fortfahren?")){data=d;save();render();toast("Import abgeschlossen")}}catch(e){alert("Die Datei ist keine gültige Sicherung.")}};r.readAsText(file)}
