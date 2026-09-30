@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#123b2a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="KundenAngebot">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Kunden & Angebote</title>
+<style>
+:root{--green:#123b2a;--green2:#1d5b40;--bg:#f3f5f4;--card:#fff;--text:#17211d;--muted:#68736e;--line:#dfe5e2;--danger:#a33b32;--shadow:0 8px 24px rgba(18,59,42,.08)}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif}
+header{position:sticky;top:0;z-index:5;background:rgba(243,245,244,.94);backdrop-filter:blur(14px);padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+h1{font-size:22px;margin:0 0 3px}.sub{color:var(--muted);font-size:13px}
+main{max-width:720px;margin:auto;padding:14px 14px 92px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;margin-bottom:12px;box-shadow:var(--shadow)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.stat{padding:15px;border-radius:14px;background:#eef3f0}.stat b{display:block;font-size:28px;margin-top:3px}.stat span{font-size:12px;color:var(--muted)}
+label{display:block;font-size:13px;font-weight:600;margin:11px 0 6px} input,textarea,select{width:100%;font:inherit;border:1px solid #cfd8d3;border-radius:11px;padding:11px;background:#fff;color:var(--text)} textarea{min-height:90px;resize:vertical}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:9px}.check{display:flex;align-items:center;gap:8px;padding:10px;border:1px solid var(--line);border-radius:11px;font-weight:500;background:#fafcfb}.check input{width:19px;height:19px}
+button{border:0;border-radius:11px;padding:11px 14px;font:inherit;font-weight:700;cursor:pointer}.primary{background:var(--green);color:#fff}.secondary{background:#e9efec;color:var(--green)}.danger{background:#f8e7e5;color:var(--danger)}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.spacer{flex:1}
+nav{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(255,255,255,.96);border-top:1px solid var(--line);display:flex;justify-content:center;padding:8px max(8px,env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom));backdrop-filter:blur(15px)}nav button{background:transparent;color:var(--muted);min-width:90px}nav button.active{color:var(--green);background:#eef3f0}
+.item{padding:13px 0;border-bottom:1px solid var(--line)}.item:last-child{border-bottom:0}.item h3{margin:0 0 4px;font-size:16px}.meta{font-size:13px;color:var(--muted);line-height:1.45}.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#f7e9c9;color:#76540a}.badge.done{background:#dcefe4;color:#1c633f}
+.hidden{display:none!important}.small{font-size:12px;color:var(--muted)}.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}.photo-grid img{width:100%;aspect-ratio:1;border-radius:10px;object-fit:cover}
+hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+.toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:#17211d;color:#fff;padding:10px 14px;border-radius:999px;font-size:13px;z-index:20;display:none}
+@media(min-width:650px){.checks{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🌳 Kunden & Angebote</h1>
+  <div class="sub">Baum-Service-Nord · mobile Baustellenaufnahme</div>
+</header>
+<main id="app"></main>
+<nav>
+  <button id="navHome" onclick="showView('home')">Übersicht</button>
+  <button id="navCustomers" onclick="showView('customers')">Kunden</button>
+  <button id="navNew" class="primary" onclick="showView('new')">＋ Neuer Auftrag</button>
+</nav>
+<div id="toast" class="toast"></div>
+
+<script>
+const KEY="kundenAngebot_v2";
+let data=JSON.parse(localStorage.getItem(KEY)||"[]");
+let currentView="home", editId=null;
+
+function save(){localStorage.setItem(KEY,JSON.stringify(data));}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+function toast(t){let e=document.getElementById("toast");e.textContent=t;e.style.display="block";setTimeout(()=>e.style.display="none",1800);}
+function showView(v,id=null){currentView=v;editId=id;render();}
+function nav(){["navHome","navCustomers","navNew"].forEach(x=>document.getElementById(x)?.classList.remove("active"));document.getElementById(vmap[currentView])?.classList.add("active")}
+const vmap={home:"navHome",customers:"navCustomers",new:"navNew",detail:"navCustomers"};
+
+function render(){
+ nav();
+ const app=document.getElementById("app");
+ if(currentView==="home") app.innerHTML=home();
+ else if(currentView==="customers") app.innerHTML=customers();
+ else if(currentView==="new") app.innerHTML=form(editId?data.find(x=>x.id===editId):null);
+ else app.innerHTML=detail(editId);
+}
+
+function home(){
+ const open=data.filter(x=>!x.offerCreated).length, done=data.filter(x=>x.offerCreated).length;
+ return `<div class="grid">
+ <div class="stat"><span>Offene Aufträge</span><b>${open}</b></div>
+ <div class="stat"><span>Angebote erstellt</span><b>${done}</b></div>
+ </div>
+ <div class="card"><div class="row"><h2 style="margin:0">Letzte Aufträge</h2><span class="spacer"></span><button class="secondary" onclick="showView('new')">＋ Neu</button></div>
+ ${data.length?data.slice().sort((a,b)=>b.createdAt-a.createdAt).slice(0,8).map(itemRow).join(""):`<p class="small">Noch keine Aufträge gespeichert.</p>`}</div>
+ <div class="card"><b>Datensicherung</b><p class="small">Die Daten liegen lokal auf diesem iPhone. Exportiere regelmäßig eine Sicherung.</p>
+ <div class="row"><button class="secondary" onclick="exportData()">Daten exportieren</button><button class="secondary" onclick="document.getElementById('importFile').click()">Daten importieren</button><input id="importFile" class="hidden" type="file" accept=".json" onchange="importData(this.files[0])"></div></div>`;
+}
+
+function customers(){
+ return `<div class="card"><div class="row"><h2 style="margin:0">Kunden & Aufträge</h2><span class="spacer"></span><button class="primary" onclick="showView('new')">＋ Neu</button></div>
+ <label>Suche</label><input id="search" placeholder="Name, Telefon, Adresse…" oninput="filterList(this.value)">
+ <div id="list">${data.slice().sort((a,b)=>b.createdAt-a.createdAt).map(itemRow).join("")||`<p class="small">Noch keine Einträge.</p>`}</div></div>`;
+}
+function filterList(q){q=q.toLowerCase();document.querySelectorAll("#list .item").forEach(e=>e.style.display=e.dataset.search.includes(q)?"":"none");}
+function itemRow(x){
+ const q=[x.customer,x.phone,x.address,x.task,x.other].join(" ").toLowerCase();
+ return `<div class="item" data-search="${esc(q)}" onclick="showView('detail','${x.id}')">
+ <div class="row"><h3>${esc(x.customer||"Ohne Kundennamen")}</h3><span class="spacer"></span><span class="badge ${x.offerCreated?"done":""}">${x.offerCreated?"Angebot erstellt":"Offen"}</span></div>
+ <div class="meta">${esc(x.address||"Keine Adresse")} · ${x.date?new Date(x.date).toLocaleDateString("de-DE"):"kein Termin"}<br>${esc(x.task||"Keine Tätigkeitsbeschreibung")}</div></div>`;
+}
+
+function form(x){
+ x=x||{id:crypto.randomUUID(),customer:"",phone:"",address:"",date:"",task:"",hab:false,stammholz:false,aeste:false,vra:false,other:"",offerCreated:false,photos:[],lat:null,lon:null,createdAt:Date.now()};
+ return `<div class="card"><div class="row"><h2 style="margin:0">${editId?"Auftrag bearbeiten":"Neuer Auftrag"}</h2><span class="spacer"></span><button class="secondary" onclick="showView(editId?'detail':'home',editId)">Abbrechen</button></div>
+ <label>Kunde *</label><input id="f_customer" value="${esc(x.customer)}" autocomplete="name">
+ <label>Telefon</label><input id="f_phone" value="${esc(x.phone)}" type="tel" autocomplete="tel">
+ <label>Adresse</label><input id="f_address" value="${esc(x.address)}" autocomplete="street-address">
+ <div class="row" style="margin-top:8px"><button class="secondary" onclick="getLocation()">📍 Standort übernehmen</button><button class="secondary" onclick="openMaps()">🗺️ Adresse in Karten</button></div>
+ <label>Termin</label><input id="f_date" value="${esc(x.date)}" type="datetime-local">
+ <label>Was ist zu tun?</label><textarea id="f_task">${esc(x.task)}</textarea>
+ <label>Leistungen / Entsorgung</label>
+ <div class="checks">
+ <label class="check"><input id="f_hab" type="checkbox" ${x.hab?"checked":""}> HAB</label>
+ <label class="check"><input id="f_stamm" type="checkbox" ${x.stammholz?"checked":""}> Stammholz</label>
+ <label class="check"><input id="f_aeste" type="checkbox" ${x.aeste?"checked":""}> Äste</label>
+ <label class="check"><input id="f_vra" type="checkbox" ${x.vra?"checked":""}> VRA</label>
+ </div>
+ <label>Sonstiges</label><textarea id="f_other">${esc(x.other)}</textarea>
+ <label>Fotos</label>
+ <input id="f_photos" type="file" accept="image/*" capture="environment" multiple>
+ <div id="photoPreview" class="photo-grid">${(x.photos||[]).map(p=>`<img src="${p}">`).join("")}</div>
+ <label class="check" style="margin-top:12px"><input id="f_offer" type="checkbox" ${x.offerCreated?"checked":""}> Angebot wurde erstellt</label>
+ <hr><div class="row"><button class="primary" onclick='saveForm(${JSON.stringify(x).replace(/</g,"\\u003c")})'>💾 Auftrag speichern</button>${editId?`<button class="danger" onclick="deleteItem('${x.id}')">Löschen</button>`:""}</div>
+ <p class="small">Die Daten werden direkt auf diesem iPhone gespeichert.</p></div>`;
+}
+function collect(x){
+ x.customer=document.getElementById("f_customer").value.trim(); x.phone=document.getElementById("f_phone").value.trim(); x.address=document.getElementById("f_address").value.trim();
+ x.date=document.getElementById("f_date").value; x.task=document.getElementById("f_task").value.trim();
+ x.hab=document.getElementById("f_hab").checked; x.stammholz=document.getElementById("f_stamm").checked; x.aeste=document.getElementById("f_aeste").checked; x.vra=document.getElementById("f_vra").checked;
+ x.other=document.getElementById("f_other").value.trim(); x.offerCreated=document.getElementById("f_offer").checked; return x;
+}
+async function saveForm(x){
+ x=collect(x); if(!x.customer){alert("Bitte einen Kundennamen eingeben.");return}
+ const files=[...document.getElementById("f_photos").files];
+ if(files.length){x.photos=x.photos||[];for(const f of files){const b=await resizeImage(f);x.photos.push(b)}}
+ const i=data.findIndex(y=>y.id===x.id); if(i>=0)data[i]=x;else data.push(x); save(); toast("Gespeichert"); showView("detail",x.id);
+}
+function resizeImage(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const c=document.createElement("canvas"),max=1200,s=Math.min(1,max/Math.max(img.width,img.height));c.width=img.width*s;c.height=img.height*s;c.getContext("2d").drawImage(img,0,0,c.width,c.height);res(c.toDataURL("image/jpeg",.72))};img.onerror=rej;img.src=r.result};r.onerror=rej;r.readAsDataURL(file)})}
+function detail(id){
+ const x=data.find(y=>y.id===id); if(!x){showView("home");return ""}
+ return `<div class="card"><div class="row"><h2 style="margin:0">${esc(x.customer)}</h2><span class="spacer"></span><span class="badge ${x.offerCreated?"done":""}">${x.offerCreated?"Angebot erstellt":"Offen"}</span></div>
+ <div class="meta">${esc(x.phone||"")} ${x.phone?`· <a href="tel:${esc(x.phone)}">Anrufen</a>`:""}<br>${esc(x.address||"")}</div>
+ ${x.date?`<p><b>Termin:</b> ${new Date(x.date).toLocaleString("de-DE",{dateStyle:"medium",timeStyle:"short"})}</p>`:""}
+ <hr><b>Aufgabe</b><p>${esc(x.task||"—")}</p>
+ <b>Leistungen</b><p>${[x.hab&&"HAB",x.stammholz&&"Stammholz",x.aeste&&"Äste",x.vra&&"VRA"].filter(Boolean).join(" · ")||"Keine Auswahl"}</p>
+ ${x.other?`<b>Sonstiges</b><p>${esc(x.other)}</p>`:""}
+ ${x.photos?.length?`<b>Fotos</b><div class="photo-grid">${x.photos.map(p=>`<img src="${p}">`).join("")}</div>`:""}
+ ${x.lat?`<p class="small">Standort gespeichert: ${x.lat.toFixed(5)}, ${x.lon.toFixed(5)}</p>`:""}
+ <hr><div class="row"><button class="primary" onclick="showView('new','${x.id}')">Bearbeiten</button>${x.phone?`<a class="secondary" style="text-decoration:none" href="tel:${esc(x.phone)}"><button class="secondary">☎️ Anrufen</button></a>`:""}${x.address?`<button class="secondary" onclick='openMaps(${JSON.stringify(x.address)})'>🗺️ Karten</button>`:""}<button class="secondary" onclick="toggleOffer('${x.id}')">${x.offerCreated?"Als offen markieren":"Angebot erstellt"}</button></div></div>`;
+}
+function toggleOffer(id){const x=data.find(y=>y.id===id);x.offerCreated=!x.offerCreated;save();render()}
+function deleteItem(id){if(confirm("Diesen Auftrag wirklich löschen?")){data=data.filter(x=>x.id!==id);save();showView("customers");}}
+function getLocation(){if(!navigator.geolocation){alert("Standort ist auf diesem Gerät nicht verfügbar.");return} navigator.geolocation.getCurrentPosition(p=>{let x=data.find(y=>y.id===editId);if(!x){toast("Bitte zuerst speichern, dann Standort erneut übernehmen.");return}x.lat=p.coords.latitude;x.lon=p.coords.longitude;toast("Standort übernommen");},e=>alert("Standort konnte nicht ermittelt werden. Bitte Standortfreigabe für diese Web-App erlauben."),{enableHighAccuracy:true,timeout:10000})}
+function openMaps(address=""){if(!address){address=document.getElementById("f_address")?.value||""} if(!address){alert("Bitte zuerst eine Adresse eingeben.");return}location.href="https://maps.apple.com/?address="+encodeURIComponent(address)}
+function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="KundenAngebot-Sicherung-"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(a.href)}
+function importData(file){if(!file)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d))throw 0;if(confirm("Import ersetzt die aktuell gespeicherten Daten. Fortfahren?")){data=d;save();render();toast("Import abgeschlossen")}}catch(e){alert("Die Datei ist keine gültige Sicherung.")}};r.readAsText(file)}
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+render();
+</script>
+</body>
+</html>
