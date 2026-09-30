@@ -24,7 +24,7 @@
 <nav><button id="navHome" onclick="showView('home')">Übersicht</button><button id="navCustomers" onclick="showView('customers')">Kunden</button><button id="navNew" class="primary" onclick="showView('new')">＋ Neu</button></nav>
 <div id="toast" class="toast"></div>
 <script>
-const KEY="kundenAngebot_v18";
+const KEY="kundenAngebot_v19";
 const SUPABASE_URL="https://tfatarjjzrhnxdgyfboh.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY="sb_publishable_kJ-ZuHwgi8UTPo3e2K0tug_Ar789SBc";
 const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
@@ -37,7 +37,7 @@ function authOverlay(){if(currentUser)return '';return `<div class="auth-overlay
 async function signIn(){const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;const msg=document.getElementById('authMsg');msg.textContent='';const {error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)msg.textContent=error.message}
 async function signUp(){const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;const msg=document.getElementById('authMsg');msg.textContent='';if(password.length<6){msg.textContent='Passwort muss mindestens 6 Zeichen haben.';return}const {data:res,error}=await supabaseClient.auth.signUp({email,password});if(error)msg.textContent=error.message;else msg.textContent=res.session?'Konto erstellt.':'Konto erstellt. Bitte ggf. die E-Mail-Adresse bestätigen.'}
 async function signOut(){await supabaseClient.auth.signOut();data=[];currentUser=null;renderApp()}
-async function loadCloud(){if(!currentUser)return;const {data:rows,error}=await supabaseClient.from('auftraege').select('*, kunden(*)').order('erstellt_am',{ascending:false});if(error){toast('Daten konnten nicht geladen werden');console.error(error);return}data=(rows||[]).map(r=>fromDb(r));save();renderApp()}
+async function loadCloud(){if(!currentUser)return;const {data:rows,error}=await supabaseClient.from('auftraege').select('*, kunden(*)').eq('owner_id',currentUser.id).order('erstellt_am',{ascending:false});if(error){toast('Daten konnten nicht geladen werden');console.error(error);return}data=(rows||[]).map(r=>fromDb(r));save();renderApp()}
 function fromDb(r){const k=r.kunden||{};return {id:r.id,type:r.typ==='Terminvereinbarung'?'termin':'angebot',customer:k.kundenname||'',phone:k.telefon||'',email:k.email||'',address:k.adresse||'',date:r.auftragsdatum||'',task:r.beschreibung||'',consider:r.bedenken||'',access:r.zugang||'',skt:!!r.skt,hab:!!r.hab,disposalAll:!!r.entsorgung_alles,stammholz:!!r.entsorgung_stammholz,astwerk:!!r.entsorgung_astwerk,hackschnitzel:!!r.entsorgung_hackschnitzel,other:r.sonstiges||'',offerCreated:r.status==='Angebot erstellt',photos:[],lat:r.latitude??null,lon:r.longitude??null,createdAt:new Date(r.erstellt_am).getTime(),kundeId:r.kunde_id}}
 async function saveCloud(x){
   if(!currentUser)throw new Error('Nicht angemeldet');
