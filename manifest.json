@@ -1,14 +1,24 @@
 {
-  "name":"Kunden & Angebote – Baum-Service-Nord",
-  "short_name":"KundenAngebot",
-  "start_url":"./",
-  "display":"standalone",
-  "background_color":"#f3f5f4",
-  "theme_color":"#123b2a",
-  "lang":"de",
-  "orientation":"portrait",
-  "icons":[
-    {"src":"icon-180.png","sizes":"180x180","type":"image/png","purpose":"any maskable"},
-    {"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  "name": "Kunden & Angebote – Baum-Service-Nord",
+  "short_name": "KundenAngebot",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f3f5f4",
+  "theme_color": "#123b2a",
+  "lang": "de",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://baum-service-nord.de/wp-content/uploads/2021/09/baumservicenord_logoweb.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://baum-service-nord.de/wp-content/uploads/2021/09/baumservicenord_logoweb.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
   ]
 }
