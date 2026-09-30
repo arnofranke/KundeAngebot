@@ -1,40 +1,92 @@
--- WICHTIG: Diese Policy fehlt in der bisherigen Einrichtung.
--- Ohne SELECT-Rechte auf kunden können Aufträge zwar gespeichert,
--- aber die zugehörigen Kundendaten nicht wieder geladen werden.
+-- V19 – korrigierte Supabase-RLS-Hilfsdatei
+-- Legt die SELECT-Policies nur an, wenn sie noch nicht vorhanden sind.
 
-create policy if not exists "kunden_select_own"
-on public.kunden
-for select
-to authenticated
-using (owner_id = auth.uid());
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname='public' AND tablename='kunden'
+      AND policyname='kunden_select_own'
+  ) THEN
+    CREATE POLICY "kunden_select_own"
+    ON public.kunden
+    FOR SELECT
+    TO authenticated
+    USING (owner_id = auth.uid());
+  END IF;
+END $$;
 
--- Sicherheitshalber auch SELECT für die übrigen Tabellen:
-create policy if not exists "auftraege_select_own"
-on public.auftraege
-for select
-to authenticated
-using (owner_id = auth.uid());
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname='public' AND tablename='auftraege'
+      AND policyname='auftraege_select_own'
+  ) THEN
+    CREATE POLICY "auftraege_select_own"
+    ON public.auftraege
+    FOR SELECT
+    TO authenticated
+    USING (owner_id = auth.uid());
+  END IF;
+END $$;
 
-create policy if not exists "termine_select_own"
-on public.termine
-for select
-to authenticated
-using (owner_id = auth.uid());
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname='public' AND tablename='termine'
+      AND policyname='termine_select_own'
+  ) THEN
+    CREATE POLICY "termine_select_own"
+    ON public.termine
+    FOR SELECT
+    TO authenticated
+    USING (owner_id = auth.uid());
+  END IF;
+END $$;
 
-create policy if not exists "fotos_select_own"
-on public.fotos
-for select
-to authenticated
-using (owner_id = auth.uid());
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname='public' AND tablename='fotos'
+      AND policyname='fotos_select_own'
+  ) THEN
+    CREATE POLICY "fotos_select_own"
+    ON public.fotos
+    FOR SELECT
+    TO authenticated
+    USING (owner_id = auth.uid());
+  END IF;
+END $$;
 
-create policy if not exists "kalkulationen_select_own"
-on public.kalkulationen
-for select
-to authenticated
-using (owner_id = auth.uid());
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname='public' AND tablename='kalkulationen'
+      AND policyname='kalkulationen_select_own'
+  ) THEN
+    CREATE POLICY "kalkulationen_select_own"
+    ON public.kalkulationen
+    FOR SELECT
+    TO authenticated
+    USING (owner_id = auth.uid());
+  END IF;
+END $$;
 
-create policy if not exists "leistungspositionen_select_own"
-on public.leistungspositionen
-for select
-to authenticated
-using (owner_id = auth.uid());
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname='public' AND tablename='leistungspositionen'
+      AND policyname='leistungspositionen_select_own'
+  ) THEN
+    CREATE POLICY "leistungspositionen_select_own"
+    ON public.leistungspositionen
+    FOR SELECT
+    TO authenticated
+    USING (owner_id = auth.uid());
+  END IF;
+END $$;
