@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#123b2a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="KundenAngebot">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>KundenAngebot</title>
+<style>
+:root{--green:#123b2a;--green2:#1d5b40;--bg:#f3f5f4;--card:#fff;--text:#17211d;--muted:#68736e;--line:#dfe5e2;--danger:#a33b32;--shadow:0 8px 24px rgba(18,59,42,.08)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif}header{position:sticky;top:0;z-index:5;background:rgba(243,245,244,.94);backdrop-filter:blur(14px);padding:14px 16px 10px;border-bottom:1px solid var(--line)}h1{font-size:22px;margin:0 0 3px}.sub{color:var(--muted);font-size:13px}main{max-width:720px;margin:auto;padding:14px 14px 92px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;margin-bottom:12px;box-shadow:var(--shadow)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stat{padding:15px;border-radius:14px;background:#eef3f0}.stat b{display:block;font-size:28px;margin-top:3px}.stat span{font-size:12px;color:var(--muted)}label{display:block;font-size:13px;font-weight:600;margin:11px 0 6px}input,textarea,select{width:100%;font:inherit;border:1px solid #cfd8d3;border-radius:11px;padding:11px;background:#fff;color:var(--text)}textarea{min-height:90px;resize:vertical}.checks{display:grid;grid-template-columns:1fr 1fr;gap:9px}.check{display:flex;align-items:center;gap:8px;padding:10px;border:1px solid var(--line);border-radius:11px;font-weight:500;background:#fafcfb}.check input{width:19px;height:19px}.type-grid{display:flex;flex-direction:column;gap:10px}.type-card{border:2px solid var(--line);border-radius:16px;padding:16px;text-align:left;cursor:pointer;background:#fff;transition:.15s}.type-card.offer{padding:24px 18px;border-color:var(--green);background:#eef3f0;text-align:center}.type-card.term{padding:11px 14px;text-align:center}.type-card.selected{border-color:var(--green);background:#eef3f0}.type-card b{display:block;margin-bottom:4px}.type-card.offer b{font-size:21px}.type-card.term b{font-size:15px}button{border:0;border-radius:11px;padding:11px 14px;font:inherit;font-weight:700;cursor:pointer}.primary{background:var(--green);color:#fff}.secondary{background:#e9efec;color:var(--green)}.danger{background:#f8e7e5;color:var(--danger)}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.spacer{flex:1}nav{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(255,255,255,.96);border-top:1px solid var(--line);display:flex;justify-content:center;padding:8px max(8px,env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom));backdrop-filter:blur(15px)}nav button{background:transparent;color:var(--muted);min-width:90px}nav button.active{color:var(--green);background:#eef3f0}.overview-list{max-height:390px;overflow-y:auto;padding-right:4px;overscroll-behavior:contain;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.filterbar{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.filterbar button{padding:8px 12px;font-size:12px}.filterbar button.active{background:var(--green);color:#fff}.item{padding:13px 0;border-bottom:1px solid var(--line)}.item:last-child{border-bottom:0}.item h3{margin:0 0 4px;font-size:16px}.meta{font-size:13px;color:var(--muted);line-height:1.45}.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#f7e9c9;color:#76540a}.badge.done{background:#dcefe4;color:#1c633f}.badge.term{background:#e4ebf8;color:#2c4e7a}.hidden{display:none!important}.small{font-size:12px;color:var(--muted)}.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}.photo-grid img{width:100%;aspect-ratio:1;border-radius:10px;object-fit:cover}.photo-item{position:relative}.photo-item button{position:absolute;right:4px;top:4px;width:28px;height:28px;padding:0;border-radius:50%;background:rgba(0,0,0,.72);color:#fff;font-size:16px;line-height:28px}hr{border:0;border-top:1px solid var(--line);margin:14px 0}.toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:#17211d;color:#fff;padding:10px 14px;border-radius:999px;font-size:13px;z-index:20;display:none}.required{color:#a33b32}.location-ok{font-size:12px;color:#1c633f;margin-top:6px}.section-title{font-size:15px;margin:16px 0 4px}.hint{font-size:12px;color:var(--muted);margin:4px 0 8px}@media(min-width:650px){.checks{grid-template-columns:repeat(4,1fr)}}
+
+.app-header{display:flex;align-items:center;gap:14px;padding:10px 10px 18px}.logo-wrap{width:190px;min-height:58px;display:flex;align-items:center}.company-logo{width:190px;height:auto;max-height:72px;object-fit:contain;object-position:left center}.logo-fallback{display:none;align-items:center;justify-content:center;flex-direction:column;width:190px;min-height:58px;border:1px solid var(--line);border-radius:10px;color:#73a900;font-weight:800;line-height:1.05;text-align:center}.logo-fallback span{font-size:11px;font-weight:600;margin-top:4px}.app-header h1{margin:0}.app-header .sub{margin-top:4px}
+.auth-overlay{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}.auth-box{width:min(440px,100%);background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow)}.auth-box h2{margin-top:0}.cloud-status{font-size:12px;color:var(--muted);margin:8px 0}.sync-badge{font-size:11px;color:#1c633f}.auth-error{font-size:13px;color:var(--danger);margin-top:8px}.auth-actions{display:flex;gap:8px;margin-top:12px}.auth-actions button{flex:1}</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<header class="app-header"><div class="logo-wrap"><img class="company-logo" src="https://baum-service-nord.de/wp-content/uploads/2021/09/baumservicenord_logoweb.png" alt="Baum Service Nord – Die Baumexperten" referrerpolicy="no-referrer" loading="eager" decoding="async" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="logo-fallback" aria-label="Baum Service Nord – Die Baumexperten">Baum Service Nord<span>Die Baumexperten</span></div></div><div><h1>KundenAngebot</h1><div class="sub">mobile Baustellenaufnahme</div></div></header>
+<main id="app"></main>
+<nav><button id="navHome" onclick="showView('home')">Übersicht</button><button id="navCustomers" onclick="showView('customers')">Kunden</button><button id="navNew" class="primary" onclick="showView('new')">＋ Neu</button></nav>
+<div id="toast" class="toast"></div>
+<script>
+const KEY="kundenAngebot_v19";
+const SUPABASE_URL="https://tfatarjjzrhnxdgyfboh.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_kJ-ZuHwgi8UTPo3e2K0tug_Ar789SBc";
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+let data=[];
+let localCache=JSON.parse(localStorage.getItem(KEY)||"[]");
+let currentUser=null,currentView="home",editId=null,draftLocation={lat:null,lon:null},newType="",draftPhotos=[],authReady=false,overviewFilter="alle";
+function save(){localStorage.setItem(KEY,JSON.stringify(data));}
+function escHtml(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+function authOverlay(){if(currentUser)return '';return `<div class="auth-overlay"><div class="auth-box"><h2>KundenAngebot</h2><p class="small">Zentrale Speicherung über Supabase</p><label>E-Mail-Adresse</label><input id="authEmail" type="email" autocomplete="email" placeholder="name@beispiel.de"><label>Passwort</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="mindestens 6 Zeichen"><div class="auth-actions"><button class="primary" onclick="signIn()">Anmelden</button><button class="secondary" onclick="signUp()">Konto erstellen</button></div><div id="authMsg" class="auth-error"></div><p class="small">Die Daten werden zentral gespeichert und können später auch von Kalkulation 2 verwendet werden.</p></div></div>`}
+async function signIn(){const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;const msg=document.getElementById('authMsg');msg.textContent='';const {error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)msg.textContent=error.message}
+async function signUp(){const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;const msg=document.getElementById('authMsg');msg.textContent='';if(password.length<6){msg.textContent='Passwort muss mindestens 6 Zeichen haben.';return}const {data:res,error}=await supabaseClient.auth.signUp({email,password});if(error)msg.textContent=error.message;else msg.textContent=res.session?'Konto erstellt.':'Konto erstellt. Bitte ggf. die E-Mail-Adresse bestätigen.'}
+async function signOut(){await supabaseClient.auth.signOut();data=[];currentUser=null;renderApp()}
+async function ensureCurrentUser(){
+  const {data:sessionData,error}=await supabaseClient.auth.getSession();
+  if(error)throw new Error('Supabase-Anmeldung konnte nicht geprüft werden: '+error.message);
+  currentUser=sessionData?.session?.user||null;
+  if(!currentUser)throw new Error('Bitte zuerst in Supabase anmelden.');
+  return currentUser;
+}
+async function claimLegacyCloudData(){
+  await ensureCurrentUser();
+  const {data:claimResult,error}=await supabaseClient.rpc('claim_legacy_kundenangebot_data');
+  if(error){
+    throw new Error('Die Übernahme alter Datensätze konnte nicht durchgeführt werden. Bitte zuerst die Datei „Supabase_Legacy_KundenAngebot.sql“ im Supabase SQL-Editor ausführen. Details: '+error.message);
+  }
+  return claimResult||{};
+}
+async function loadCloud(){
+  try{
+    await ensureCurrentUser();
+    const claim=await claimLegacyCloudData();
+    const [kundenResult,auftragResult]=await Promise.all([
+      supabaseClient.from('kunden').select('*').eq('owner_id',currentUser.id),
+      supabaseClient.from('auftraege').select('*').eq('owner_id',currentUser.id)
+    ]);
+    if(kundenResult.error)throw new Error('Kundendaten: '+kundenResult.error.message);
+    if(auftragResult.error)throw new Error('Auftragsdaten: '+auftragResult.error.message);
+    const kundenMap=new Map((kundenResult.data||[]).map(k=>[k.id,k]));
+    const rows=(auftragResult.data||[]).slice().sort((a,b)=>{
+      const ta=a.erstellt_am?new Date(a.erstellt_am).getTime():0;
+      const tb=b.erstellt_am?new Date(b.erstellt_am).getTime():0;
+      return tb-ta;
+    });
+    data=rows.map(r=>fromDb({...r,kunden:kundenMap.get(r.kunde_id)||{}}));
+    save();
+    renderApp();
+    const kc=Number(claim?.kunden_claimed||0),ac=Number(claim?.auftraege_claimed||0);
+    if(kc||ac)toast(`Alte Daten übernommen: ${kc} Kunden · ${ac} Datensätze`);
+    return data;
+  }catch(error){
+    console.error('Supabase-Laden fehlgeschlagen:',error);
+    toast('Supabase: '+(error.message||'Daten konnten nicht geladen werden'));
+    throw error;
+  }
+}
+function fromDb(r){
+  const k=r.kunden||{};
+  const rawType=String(r.typ||'').trim().toLowerCase();
+  const type=rawType==='terminvereinbarung'?'termin':(rawType==='to-do'||rawType==='todo'?'todo':'angebot');
+  const created=r.erstellt_am?new Date(r.erstellt_am).getTime():(r.auftragsdatum?new Date(r.auftragsdatum).getTime():Date.now());
+  return {id:r.id,type,customer:k.kundenname||'',phone:k.telefon||'',email:k.email||'',address:k.adresse||'',date:r.auftragsdatum||'',task:r.beschreibung||'',consider:r.bedenken||'',access:r.zugang||'',skt:!!r.skt,hab:!!r.hab,disposalAll:!!r.entsorgung_alles,stammholz:!!r.entsorgung_stammholz,astwerk:!!r.entsorgung_astwerk,hackschnitzel:!!r.entsorgung_hackschnitzel,other:r.sonstiges||'',offerCreated:r.status==='Angebot erstellt',photos:[],lat:r.latitude??null,lon:r.longitude??null,createdAt:Number.isFinite(created)?created:Date.now(),kundeId:r.kunde_id||null};
+}
+async function saveCloud(x){
+  await ensureCurrentUser();
+  if(x.type==='todo'){
+    const isNew=!x.id;
+    const auftragId=x.id||crypto.randomUUID();
+    const auftrag={id:auftragId,kunde_id:null,owner_id:currentUser.id,typ:'To-do',status:'Neu',auftragsdatum:null,beschreibung:x.task||'',bedenken:null,zugang:null,skt:false,hab:false,entsorgung_alles:false,entsorgung_stammholz:false,entsorgung_astwerk:false,entsorgung_hackschnitzel:false,sonstiges:null,latitude:null,longitude:null};
+    const q=isNew
+      ?supabaseClient.from('auftraege').insert(auftrag)
+      :supabaseClient.from('auftraege').update(auftrag).eq('id',auftragId).eq('owner_id',currentUser.id);
+    const {data:row,error}=await q.select('*').single();
+    if(error)throw new Error('To-do konnte nicht gespeichert werden: '+error.message);
+    x.id=row.id;
+    x.createdAt=x.createdAt||Date.now();
+    return x;
+  }
+  let kundeId=x.kundeId||null;
+  const kunde={kundenname:x.customer,adresse:x.address||null,telefon:x.phone||null,email:x.email||null,owner_id:currentUser.id};
+  if(kundeId){
+    const {data:updatedKunde,error}=await supabaseClient.from('kunden').update(kunde).eq('id',kundeId).eq('owner_id',currentUser.id).select('*').single();
+    if(error)throw new Error('Kunde konnte nicht aktualisiert werden: '+error.message);
+    kundeId=updatedKunde.id;
+  }else{
+    kundeId=crypto.randomUUID();
+    const {data:newKunde,error}=await supabaseClient.from('kunden').insert({...kunde,id:kundeId}).select('*').single();
+    if(error)throw new Error('Kunde konnte nicht gespeichert werden: '+error.message);
+    kundeId=newKunde.id;
+    x.kundeId=kundeId;
+  }
+  const auftrag={kunde_id:kundeId,owner_id:currentUser.id,typ:x.type==='termin'?'Terminvereinbarung':'Angebot',status:x.offerCreated?'Angebot erstellt':'Neu',auftragsdatum:x.date?String(x.date).slice(0,10):null,beschreibung:x.task||'',bedenken:x.consider||null,zugang:x.access||null,skt:!!x.skt,hab:!!x.hab,entsorgung_alles:!!x.disposalAll,entsorgung_stammholz:!!x.stammholz,entsorgung_astwerk:!!x.astwerk,entsorgung_hackschnitzel:!!x.hackschnitzel,sonstiges:x.other||null,latitude:x.lat??null,longitude:x.lon??null};
+  if(x.id){
+    const {data:updated,error}=await supabaseClient.from('auftraege').update(auftrag).eq('id',x.id).eq('owner_id',currentUser.id).select('*').single();
+    if(error)throw new Error('Auftrag konnte nicht aktualisiert werden: '+error.message);
+    x.id=updated.id;
+  }else{
+    const {data:created,error}=await supabaseClient.from('auftraege').insert({...auftrag,id:crypto.randomUUID()}).select('*').single();
+    if(error)throw new Error('Auftrag konnte nicht gespeichert werden: '+error.message);
+    x.id=created.id;
+  }
+  x.createdAt=x.createdAt||Date.now();
+  return x;
+}
+async function deleteCloud(x){if(x?.id){const {error}=await supabaseClient.from('auftraege').delete().eq('id',x.id);if(error)throw error}}
+function renderApp(){
+  const app=document.getElementById('app');
+  if(!authReady){app.innerHTML='<div class="card"><h2>KundenAngebot</h2><p class="small">Verbindung wird vorbereitet …</p></div>';return;}
+  if(currentView==='home')app.innerHTML=home();
+  else if(currentView==='customers')app.innerHTML=customers();
+  else if(currentView==='new')app.innerHTML=form(editId?data.find(x=>x.id===editId):null);
+  else app.innerHTML=detail(editId);
+  document.querySelectorAll('.auth-overlay').forEach(e=>e.remove());
+  if(!currentUser)document.body.insertAdjacentHTML('beforeend',authOverlay());
+}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+function toast(t){const e=document.getElementById("toast");e.textContent=t;e.style.display="block";setTimeout(()=>e.style.display="none",1800)}
+function showView(v,id=null){currentView=v;editId=id;if(v==='new'&&id===null){newType='';draftPhotos=[];}renderApp()}
+function nav(){["navHome","navCustomers","navNew"].forEach(x=>document.getElementById(x)?.classList.remove("active"));document.getElementById({home:"navHome",customers:"navCustomers",new:"navNew",detail:"navCustomers"}[currentView])?.classList.add("active")}
+function render(){renderApp()}
+function formatInputDate(x){const d=Number.isFinite(x?.createdAt)?new Date(x.createdAt):null;return d&&!isNaN(d.getTime())?d.toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'}):'unbekannt'}
+function filteredOverviewData(){const sorted=data.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));if(overviewFilter==='offen')return sorted.filter(x=>x.type==='angebot'&&!x.offerCreated);if(overviewFilter==='erstellt')return sorted.filter(x=>x.type==='angebot'&&x.offerCreated);return sorted}
+function setOverviewFilter(filter){overviewFilter=filter;renderApp()}
+function home(){const open=data.filter(x=>x.type==="angebot"&&!x.offerCreated).length,done=data.filter(x=>x.type==="angebot"&&x.offerCreated).length,term=data.filter(x=>x.type==="termin").length;const rows=filteredOverviewData();return `<div class="grid"><div class="stat"><span>Offene Angebote</span><b>${open}</b></div><div class="stat"><span>Angebote erstellt</span><b>${done}</b></div></div><div class="card"><div class="row"><h2 style="margin:0">Übersicht</h2><span class="spacer"></span><span class="small">${rows.length} Datensätze geladen · Termine: ${term}</span><button class="secondary" onclick="signOut()">Abmelden</button></div><div class="cloud-status">☁️ Zentral gespeichert · ${esc(currentUser?.email||"")}</div><div class="filterbar"><button class="secondary ${overviewFilter==='alle'?'active':''}" onclick="setOverviewFilter('alle')">Alle</button><button class="secondary ${overviewFilter==='offen'?'active':''}" onclick="setOverviewFilter('offen')">Offen</button><button class="secondary ${overviewFilter==='erstellt'?'active':''}" onclick="setOverviewFilter('erstellt')">Erstellt</button></div>${rows.length?`<div class="overview-list">${rows.map(itemRow).join("")}</div>`:`<p class="small">Keine Datensätze für diesen Filter.</p>`}</div><div class="card"><label class="check" style="margin:0;cursor:pointer"><input id="backupToggle" type="checkbox" onchange="toggleBackup(this.checked)"> Datensicherung</label><div id="backupBox" class="hidden"><p class="small">Die Daten werden zentral in Supabase gespeichert. Eine lokale Sicherung bleibt zusätzlich möglich.</p><div class="row"><button class="secondary" onclick="exportData()">Daten exportieren</button><button class="secondary" onclick="document.getElementById('importFile').click()">Daten importieren</button><input id="importFile" class="hidden" type="file" accept=".json" onchange="importData(this.files[0])"></div></div></div>`}
+function customers(){return `<div class="card"><div class="row"><h2 style="margin:0">Kunden & Datensätze</h2><span class="spacer"></span><button class="primary" onclick="showView('new')">＋ Neu</button></div><label>Suche</label><input id="search" placeholder="Name, Telefon, E-Mail, Adresse…" oninput="filterList(this.value)"><div id="list">${data.slice().sort((a,b)=>b.createdAt-a.createdAt).map(itemRow).join("")||`<p class="small">Noch keine Einträge.</p>`}</div></div>`}
+function filterList(q){q=q.toLowerCase();document.querySelectorAll("#list .item").forEach(e=>e.style.display=e.dataset.search.includes(q)?"":"none")}
+function toggleBackup(on){document.getElementById('backupBox')?.classList.toggle('hidden',!on)}
+function itemRow(x){const q=[x.customer,x.phone,x.email,x.address,x.task,x.consider,x.access,x.other,x.type].join(" ").toLowerCase();const label=x.type==='termin'?'Terminvergabe':(x.type==='todo'?'To-do':(x.offerCreated?'Angebot erstellt':'Angebot offen'));const title=x.type==='todo'?'To-do':(x.customer||"Ohne Kundennamen");const dateLine=x.type==='todo'||x.type==='termin'?`Eingabedatum: ${formatInputDate(x)}`:`Eingabedatum: ${formatInputDate(x)}${x.date?' · Termin: '+new Date(x.date).toLocaleString("de-DE",{dateStyle:"medium",timeStyle:"short"}):''}`;return `<div class="item" data-search="${esc(q)}" onclick="showView('detail','${x.id}')"><div class="row"><h3>${esc(title)}</h3><span class="spacer"></span><span class="badge ${x.type==='termin'?'term':(x.offerCreated?'done':'')}">${label}</span></div><div class="meta">${x.type==='todo'?'':`${esc(x.address||"Keine Adresse")} · `}${dateLine}<br>${esc(x.task||"Keine Tätigkeitsbeschreibung")}</div><div class="row" style="margin-top:7px"><span class="spacer"></span><button class="secondary" onclick="event.stopPropagation();showView('new','${x.id}')">Bearbeiten</button></div></div>`}
+function blank(){return {id:null,type:"",customer:"",phone:"",email:"",address:"",date:"",task:"",consider:"",access:"",skt:false,hab:false,disposalAll:false,stammholz:false,astwerk:false,hackschnitzel:false,other:"",offerCreated:false,photos:[],lat:null,lon:null,createdAt:Date.now()}}
+function form(x){x=x||blank();if(!x.type&&newType)x.type=newType;draftLocation={lat:x.lat,lon:x.lon};draftPhotos=Array.isArray(x.photos)?x.photos.slice():[];if(x.type==='todo')return `<div class="card"><div class="row"><h2 style="margin:0">${editId?"To-do bearbeiten":"Neues To-do"}</h2><span class="spacer"></span><button class="secondary" onclick="showView(editId?'detail':'home',editId)">Abbrechen</button></div><div class="section-title">To-do</div><p class="hint">Für ein To-do wird nur der Text erfasst.</p><label>Aufgabe <span class="required">*</span></label><textarea id="f_todo" placeholder="To-do eingeben …">${esc(x.task)}</textarea><hr><button class="primary" style="width:100%" onclick='saveForm(${JSON.stringify(x).replace(/</g,"\u003c")})'>💾 To-do speichern</button>${editId?`<button class="danger" style="width:100%;margin-top:8px" onclick="deleteItem('${x.id}')">To-do löschen</button>`:""}</div>`;if(!x.type&&!editId)return `<div class="card"><div class="row"><h2 style="margin:0">Neuen Datensatz erstellen</h2><span class="spacer"></span><button class="secondary" onclick="showView('home')">Abbrechen</button></div><div class="section-title">Auswahl <span class="required">*</span></div><p class="hint">Bitte genau eine Möglichkeit auswählen.</p><div class="type-grid" role="radiogroup" aria-label="Art des neuen Datensatzes"><div class="type-card offer" onclick="chooseType('angebot')" role="radio" aria-label="Angebot"><b>📋 Angebot</b><span class="small">Kundendaten und Leistungsumfang für ein Angebot erfassen</span></div><div class="type-card term" onclick="chooseType('termin')" role="radio" aria-label="Terminvergabe"><b>📅 Terminvergabe</b><span class="small">Kundendaten für eine Terminvereinbarung erfassen</span></div><div class="type-card term" onclick="chooseType('todo')" role="radio" aria-label="To-do"><b>☑️ To-do</b><span class="small">Einfach nur ein To-do erfassen</span></div></div></div>`;const selectedTitle=x.type==='angebot'?'Angebot':(x.type==='termin'?'Terminvergabe':'To-do');return `<div class="card"><div class="row"><h2 style="margin:0">${editId?selectedTitle+" bearbeiten":selectedTitle}</h2><span class="spacer"></span><button class="secondary" onclick="showView(editId?'detail':'home',editId)">Abbrechen</button></div><input id="f_type" type="hidden" value="${esc(x.type)}"><div class="section-title">Kundendaten</div><label>Kundenname <span class="required">*</span></label><input id="f_customer" value="${esc(x.customer)}" autocomplete="name"><label>Adresse</label><input id="f_address" value="${esc(x.address)}" autocomplete="street-address"><div class="row" style="margin-top:8px"><button class="secondary" onclick="getLocation()">📍 Standort übernehmen</button><button class="secondary" onclick="openMaps()">🗺️ Adresse in Karten</button></div><div id="locationStatus" class="location-ok">${draftLocation.lat?"✓ Standort übernommen":""}</div><label>Telefonnummer</label><input id="f_phone" value="${esc(x.phone)}" type="tel" autocomplete="tel"><label>E-Mail-Adresse</label><input id="f_email" value="${esc(x.email)}" type="email" autocomplete="email"><div class="section-title">3. Einsatz</div><label>Was ist zu tun? <span class="required">*</span></label><textarea id="f_task" placeholder="Beschreibung der Arbeiten">${esc(x.task)}</textarea><label>Was ist zu bedenken?</label><textarea id="f_consider" placeholder="Besonderheiten, Gefahren, Wünsche, Hinweise…">${esc(x.consider)}</textarea><label>Zugang</label><textarea id="f_access" placeholder="Zugang zum Grundstück / Baum, Zufahrt, Engstellen, Schlüssel usw.">${esc(x.access)}</textarea><label>Zugang / Arbeitsmittel</label><div class="checks"><label class="check"><input id="f_skt" type="checkbox" ${x.skt?'checked':''}> SKT</label><label class="check"><input id="f_hab" type="checkbox" ${x.hab?'checked':''}> HAB</label></div><label>Entsorgung</label><div class="hint">„Alles“ setzt Stammholz, Astwerk und Hackschnitzel gemeinsam.</div><div class="checks"><label class="check"><input id="f_all" type="checkbox" ${x.disposalAll?'checked':''} onchange="toggleAllDisposal(this.checked)"> Alles</label><label class="check"><input id="f_stamm" type="checkbox" ${x.stammholz?'checked':''} onchange="individualDisposalChanged()"> Stammholz</label><label class="check"><input id="f_ast" type="checkbox" ${x.astwerk?'checked':''} onchange="individualDisposalChanged()"> Astwerk</label><label class="check"><input id="f_hack" type="checkbox" ${x.hackschnitzel?'checked':''} onchange="individualDisposalChanged()"> Hackschnitzel</label></div><label>Sonstiges</label><textarea id="f_other" placeholder="Weitere Angaben">${esc(x.other)}</textarea><label>Fotos</label><div class="row"><button type="button" class="secondary" onclick="document.getElementById('f_photos').click()">📷 Foto hinzufügen</button><span id="photoCount" class="small">${(x.photos||[]).length} Foto(s)</span></div><input id="f_photos" class="hidden" type="file" accept="image/*" capture="environment" onchange="addSelectedPhotos(this)"><div class="hint">Du kannst nacheinander beliebig viele Fotos aufnehmen oder aus der Mediathek auswählen. Alle Fotos werden beim Speichern zusammen mit dem Datensatz abgelegt.</div><div id="photoPreview" class="photo-grid">${(x.photos||[]).map((p,i)=>`<div class="photo-item"><img src="${p}"><button type="button" aria-label="Foto entfernen" onclick="removePhoto(${i})">×</button></div>`).join("")}</div><input id="f_offer" type="hidden" value="false"><hr><button class="primary" style="width:100%" onclick='saveForm(${JSON.stringify(x).replace(/</g,"\\u003c")})'>💾 Daten speichern</button>${editId?`<button class="danger" style="width:100%;margin-top:8px" onclick="deleteItem('${x.id}')">Datensatz löschen</button>`:""}<p class="small">Die Daten werden zentral in Supabase gespeichert.</p></div>`}
+function chooseType(t){if(editId){setType(t);return}newType=t;renderApp()}
+function setType(t){const el=document.getElementById('f_type');if(el)el.value=t;document.querySelectorAll('.type-card').forEach(e=>e.classList.remove('selected'));document.querySelectorAll('.type-card')[t==='angebot'?0:(t==='termin'?1:2)]?.classList.add('selected');const offer=document.getElementById('f_offer');if(t==='angebot'&&offer?.type==='checkbox'){}else if(offer)offer.value='false'}
+function collect(x){x.type=document.getElementById('f_type')?.value||x.type;if(x.type==='todo'){x.task=document.getElementById('f_todo')?.value.trim()||'';x.customer='';x.address='';x.phone='';x.email='';x.date='';x.consider='';x.access='';x.skt=false;x.hab=false;x.disposalAll=false;x.stammholz=false;x.astwerk=false;x.hackschnitzel=false;x.other='';x.offerCreated=false;x.photos=[];x.lat=null;x.lon=null;return x}x.customer=document.getElementById('f_customer').value.trim();x.address=document.getElementById('f_address').value.trim();x.phone=document.getElementById('f_phone').value.trim();x.email=document.getElementById('f_email').value.trim();x.date=x.type==='termin'?"":(document.getElementById('f_date')?.value||"");x.task=document.getElementById('f_task').value.trim();x.consider=document.getElementById('f_consider').value.trim();x.access=document.getElementById('f_access').value.trim();x.skt=document.getElementById('f_skt').checked;x.hab=document.getElementById('f_hab').checked;x.disposalAll=document.getElementById('f_all').checked;x.stammholz=document.getElementById('f_stamm').checked;x.astwerk=document.getElementById('f_ast').checked;x.hackschnitzel=document.getElementById('f_hack').checked;x.other=document.getElementById('f_other').value.trim();x.offerCreated=x.offerCreated||false;x.lat=draftLocation.lat;x.lon=draftLocation.lon;return x}
+async function addSelectedPhotos(input){const files=[...input.files];if(!files.length)return;for(const f of files){try{draftPhotos.push(await resizeImage(f))}catch(e){alert('Ein Foto konnte nicht verarbeitet werden.')}}input.value='';renderPhotoPreview()}
+function renderPhotoPreview(){const e=document.getElementById('photoPreview');const c=document.getElementById('photoCount');if(e)e.innerHTML=draftPhotos.map((p,i)=>`<div class="photo-item"><img src="${p}"><button type="button" aria-label="Foto entfernen" onclick="removePhoto(${i})">×</button></div>`).join('');if(c)c.textContent=`${draftPhotos.length} Foto(s)`}
+function removePhoto(i){draftPhotos.splice(i,1);renderPhotoPreview()}
+async function saveForm(x){x=collect(x);if(!x.type){alert('Bitte zuerst Angebot, Terminvergabe oder To-do auswählen.');return}if(x.type==='todo'){if(!x.task){alert('Bitte ein To-do eingeben.');return}}else if(!x.customer||!x.task){alert('Bitte mindestens Kundenname und „Was ist zu tun?“ ausfüllen.');return}x.photos=draftPhotos.slice();try{const saved=await saveCloud(x);const i=data.findIndex(y=>y.id===saved.id);if(i>=0)data[i]=saved;else data.push(saved);save();toast('Zentral gespeichert');showView('detail',saved.id)}catch(e){console.error(e);alert('Speichern in Supabase fehlgeschlagen: '+(e.message||e))}}
+function resizeImage(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas'),max=1200,s=Math.min(1,max/Math.max(img.width,img.height));c.width=Math.max(1,Math.round(img.width*s));c.height=Math.max(1,Math.round(img.height*s));c.getContext('2d').drawImage(img,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.72))};img.onerror=rej;img.src=r.result};r.onerror=rej;r.readAsDataURL(file)})}
+function detail(id){const x=data.find(y=>y.id===id);if(!x){showView('home');return ''}if(x.type==='todo')return `<div class="card"><div class="row"><h2 style="margin:0">To-do</h2><span class="spacer"></span><span class="badge">To-do</span></div><div class="meta"><b>Eingabedatum:</b> ${formatInputDate(x)}</div><hr><b>Aufgabe</b><p>${esc(x.task)}</p><hr><div class="row"><button class="primary" onclick="showView('new','${x.id}')">Bearbeiten</button><button class="danger" onclick="deleteItem('${x.id}')">Löschen</button></div></div>`;const type=x.type==='termin'?'Terminvergabe':'Angebot';const dispos=x.disposalAll?'Alles':[x.stammholz&&'Stammholz',x.astwerk&&'Astwerk',x.hackschnitzel&&'Hackschnitzel'].filter(Boolean).join(', ')||'Keine Auswahl';return `<div class="card"><div class="row"><h2 style="margin:0">${esc(x.customer)}</h2><span class="spacer"></span><span class="badge ${x.type==='termin'?'term':(x.offerCreated?'done':'')}">${x.type==='termin'?'Terminvergabe':(x.offerCreated?'Angebot erstellt':'Angebot offen')}</span></div><div class="meta">Eingabedatum: ${formatInputDate(x)}<br>${esc(x.phone)} · <a href="tel:${esc(x.phone)}">Anrufen</a><br>${esc(x.email)}<br>${esc(x.address)}</div>${x.type!=='termin'&&x.date?`<p><b>Termin:</b> ${new Date(x.date).toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'})}</p>`:''}<hr><b>Was ist zu tun?</b><p>${esc(x.task)}</p>${x.consider?`<b>Was ist zu bedenken?</b><p>${esc(x.consider)}</p>`:''}${x.access?`<b>Zugang</b><p>${esc(x.access)}</p>`:''}<b>SKT / HAB</b><p>${[x.skt&&'SKT',x.hab&&'HAB'].filter(Boolean).join(' · ')||'Keine Auswahl'}</p><b>Entsorgung</b><p>${esc(dispos)}</p>${x.other?`<b>Sonstiges</b><p>${esc(x.other)}</p>`:''}${x.photos?.length?`<b>Fotos</b><div class="photo-grid">${x.photos.map(p=>`<img src="${p}">`).join('')}</div>`:''}${x.lat?`<p class="small">📍 Standort gespeichert: ${x.lat.toFixed(5)}, ${x.lon.toFixed(5)}</p>`:''}<hr><div class="row"><button class="primary" onclick="showView('new','${x.id}')">Bearbeiten</button><button class="secondary" onclick='openMaps(${JSON.stringify(x.address)})'>🗺️ Karten</button>${x.type==='angebot'?`<button class="secondary" onclick="toggleOffer('${x.id}')">${x.offerCreated?'Als offen markieren':'Angebot erstellt'}</button>`:''}</div></div>`}
+function toggleAllDisposal(on){['f_stamm','f_ast','f_hack'].forEach(id=>{const e=document.getElementById(id);if(e)e.checked=on})}
+function individualDisposalChanged(){const vals=['f_stamm','f_ast','f_hack'].map(id=>document.getElementById(id)?.checked);const all=document.getElementById('f_all');if(all)all.checked=vals.every(Boolean)}
+async function toggleOffer(id){const x=data.find(y=>y.id===id);if(!x)return;x.offerCreated=!x.offerCreated;try{await saveCloud(x);save();renderApp()}catch(e){x.offerCreated=!x.offerCreated;alert('Status konnte nicht gespeichert werden.')}}
+async function deleteItem(id){if(!confirm('Diesen Datensatz wirklich löschen?'))return;const x=data.find(y=>y.id===id);try{await deleteCloud(x);data=data.filter(y=>y.id!==id);save();showView('customers')}catch(e){alert('Löschen fehlgeschlagen: '+(e.message||e))}}
+async function getLocation(){if(!navigator.geolocation){alert('Standort ist auf diesem Gerät nicht verfügbar.');return}const status=document.getElementById('locationStatus');if(status)status.textContent='📍 Standort wird ermittelt …';navigator.geolocation.getCurrentPosition(async p=>{draftLocation={lat:p.coords.latitude,lon:p.coords.longitude};try{const r=await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='+encodeURIComponent(p.coords.latitude)+'&lon='+encodeURIComponent(p.coords.longitude)+'&zoom=18&addressdetails=1',{headers:{'Accept':'application/json','Accept-Language':'de'}});if(!r.ok)throw new Error('Geocoding fehlgeschlagen');const j=await r.json();const a=j.address||{};const parts=[];const road=a.road||a.pedestrian||a.cycleway||a.footway||'';const house=a.house_number||'';if(road)parts.push(road+(house?' '+house:''));const postcode=a.postcode||'';const city=a.city||a.town||a.village||a.municipality||a.suburb||'';const locality=[postcode,city].filter(Boolean).join(' ');if(locality)parts.push(locality);const addr=parts.join(', ');const input=document.getElementById('f_address');if(input&&addr)input.value=addr;if(status)status.textContent=addr?'✓ Standort übernommen · Adresse automatisch eingetragen':'✓ Standort übernommen · Adresse konnte nicht automatisch ermittelt werden';toast(addr?'Standort und Adresse übernommen':'Standort übernommen');}catch(err){if(status)status.textContent='✓ Standort übernommen · Adresse konnte nicht automatisch ermittelt werden';toast('Standort übernommen; Adresse bitte prüfen/eingeben');}},e=>{if(status)status.textContent='';alert('Standort konnte nicht ermittelt werden. Bitte Standortfreigabe für diese Web-App erlauben.')},{enableHighAccuracy:true,timeout:15000,maximumAge:0})}
+function openMaps(address=''){if(!address)address=document.getElementById('f_address')?.value||'';if(!address){alert('Bitte zuerst eine Adresse eingeben.');return}location.href='https://maps.apple.com/?address='+encodeURIComponent(address)}
+function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='KundenAngebot-Sicherung-'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(a.href)}
+function importData(file){if(!file)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d))throw 0;if(confirm('Import ersetzt die aktuell gespeicherten Daten. Fortfahren?')){data=d;save();render();toast('Import abgeschlossen')}}catch(e){alert('Die Datei ist keine gültige Sicherung.')}};r.readAsText(file)}
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+(async()=>{
+  try{
+    const {data:{session}}=await supabaseClient.auth.getSession();
+    currentUser=session?.user||null;
+  }catch(e){console.error('Supabase Auth:',e);currentUser=null;}
+  authReady=true;
+  renderApp();
+  if(currentUser){
+    try{await loadCloud()}catch(e){console.error(e)}
+  }
+})();
+supabaseClient.auth.onAuthStateChange((_event,session)=>{
+  currentUser=session?.user||null;
+  if(authReady){
+    renderApp();
+    if(currentUser)loadCloud().catch(e=>console.error(e));
+  }
+});
+</script>
+</body>
+</html>
