@@ -37,39 +37,93 @@ function authOverlay(){if(currentUser)return '';return `<div class="auth-overlay
 async function signIn(){const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;const msg=document.getElementById('authMsg');msg.textContent='';const {error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)msg.textContent=error.message}
 async function signUp(){const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;const msg=document.getElementById('authMsg');msg.textContent='';if(password.length<6){msg.textContent='Passwort muss mindestens 6 Zeichen haben.';return}const {data:res,error}=await supabaseClient.auth.signUp({email,password});if(error)msg.textContent=error.message;else msg.textContent=res.session?'Konto erstellt.':'Konto erstellt. Bitte ggf. die E-Mail-Adresse bestätigen.'}
 async function signOut(){await supabaseClient.auth.signOut();data=[];currentUser=null;renderApp()}
-async function loadCloud(){if(!currentUser)return;const {data:rows,error}=await supabaseClient.from('auftraege').select('*, kunden(*)').eq('owner_id',currentUser.id).order('erstellt_am',{ascending:false});if(error){toast('Daten konnten nicht geladen werden');console.error(error);return}data=(rows||[]).map(r=>fromDb(r));save();renderApp()}
-function fromDb(r){const k=r.kunden||{};const type=r.typ==='Terminvereinbarung'?'termin':(r.typ==='To-do'?'todo':'angebot');return {id:r.id,type,customer:k.kundenname||'',phone:k.telefon||'',email:k.email||'',address:k.adresse||'',date:r.auftragsdatum||'',task:r.beschreibung||'',consider:r.bedenken||'',access:r.zugang||'',skt:!!r.skt,hab:!!r.hab,disposalAll:!!r.entsorgung_alles,stammholz:!!r.entsorgung_stammholz,astwerk:!!r.entsorgung_astwerk,hackschnitzel:!!r.entsorgung_hackschnitzel,other:r.sonstiges||'',offerCreated:r.status==='Angebot erstellt',photos:[],lat:r.latitude??null,lon:r.longitude??null,createdAt:new Date(r.erstellt_am).getTime(),kundeId:r.kunde_id}}
+async function ensureCurrentUser(){
+  const {data:sessionData,error}=await supabaseClient.auth.getSession();
+  if(error)throw new Error('Supabase-Anmeldung konnte nicht geprüft werden: '+error.message);
+  currentUser=sessionData?.session?.user||null;
+  if(!currentUser)throw new Error('Bitte zuerst in Supabase anmelden.');
+  return currentUser;
+}
+async function claimLegacyCloudData(){
+  await ensureCurrentUser();
+  const {data:claimResult,error}=await supabaseClient.rpc('claim_legacy_kundenangebot_data');
+  if(error){
+    throw new Error('Die Übernahme alter Datensätze konnte nicht durchgeführt werden. Bitte zuerst die Datei „Supabase_Legacy_KundenAngebot.sql“ im Supabase SQL-Editor ausführen. Details: '+error.message);
+  }
+  return claimResult||{};
+}
+async function loadCloud(){
+  try{
+    await ensureCurrentUser();
+    const claim=await claimLegacyCloudData();
+    const [kundenResult,auftragResult]=await Promise.all([
+      supabaseClient.from('kunden').select('*').eq('owner_id',currentUser.id),
+      supabaseClient.from('auftraege').select('*').eq('owner_id',currentUser.id)
+    ]);
+    if(kundenResult.error)throw new Error('Kundendaten: '+kundenResult.error.message);
+    if(auftragResult.error)throw new Error('Auftragsdaten: '+auftragResult.error.message);
+    const kundenMap=new Map((kundenResult.data||[]).map(k=>[k.id,k]));
+    const rows=(auftragResult.data||[]).slice().sort((a,b)=>{
+      const ta=a.erstellt_am?new Date(a.erstellt_am).getTime():0;
+      const tb=b.erstellt_am?new Date(b.erstellt_am).getTime():0;
+      return tb-ta;
+    });
+    data=rows.map(r=>fromDb({...r,kunden:kundenMap.get(r.kunde_id)||{}}));
+    save();
+    renderApp();
+    const kc=Number(claim?.kunden_claimed||0),ac=Number(claim?.auftraege_claimed||0);
+    if(kc||ac)toast(`Alte Daten übernommen: ${kc} Kunden · ${ac} Datensätze`);
+    return data;
+  }catch(error){
+    console.error('Supabase-Laden fehlgeschlagen:',error);
+    toast('Supabase: '+(error.message||'Daten konnten nicht geladen werden'));
+    throw error;
+  }
+}
+function fromDb(r){
+  const k=r.kunden||{};
+  const rawType=String(r.typ||'').trim().toLowerCase();
+  const type=rawType==='terminvereinbarung'?'termin':(rawType==='to-do'||rawType==='todo'?'todo':'angebot');
+  const created=r.erstellt_am?new Date(r.erstellt_am).getTime():(r.auftragsdatum?new Date(r.auftragsdatum).getTime():Date.now());
+  return {id:r.id,type,customer:k.kundenname||'',phone:k.telefon||'',email:k.email||'',address:k.adresse||'',date:r.auftragsdatum||'',task:r.beschreibung||'',consider:r.bedenken||'',access:r.zugang||'',skt:!!r.skt,hab:!!r.hab,disposalAll:!!r.entsorgung_alles,stammholz:!!r.entsorgung_stammholz,astwerk:!!r.entsorgung_astwerk,hackschnitzel:!!r.entsorgung_hackschnitzel,other:r.sonstiges||'',offerCreated:r.status==='Angebot erstellt',photos:[],lat:r.latitude??null,lon:r.longitude??null,createdAt:Number.isFinite(created)?created:Date.now(),kundeId:r.kunde_id||null};
+}
 async function saveCloud(x){
-  if(!currentUser)throw new Error('Nicht angemeldet');
+  await ensureCurrentUser();
   if(x.type==='todo'){
+    const isNew=!x.id;
     const auftragId=x.id||crypto.randomUUID();
     const auftrag={id:auftragId,kunde_id:null,owner_id:currentUser.id,typ:'To-do',status:'Neu',auftragsdatum:null,beschreibung:x.task||'',bedenken:null,zugang:null,skt:false,hab:false,entsorgung_alles:false,entsorgung_stammholz:false,entsorgung_astwerk:false,entsorgung_hackschnitzel:false,sonstiges:null,latitude:null,longitude:null};
-    const {data:row,error}=await supabaseClient.from('auftraege').upsert(auftrag,{onConflict:'id'}).select().single();
-    if(error)throw error;
-    x.id=row?.id||auftragId;
+    const q=isNew
+      ?supabaseClient.from('auftraege').insert(auftrag)
+      :supabaseClient.from('auftraege').update(auftrag).eq('id',auftragId).eq('owner_id',currentUser.id);
+    const {data:row,error}=await q.select('*').single();
+    if(error)throw new Error('To-do konnte nicht gespeichert werden: '+error.message);
+    x.id=row.id;
     x.createdAt=x.createdAt||Date.now();
     return x;
   }
-  let kundeId=x.kundeId;
+  let kundeId=x.kundeId||null;
   const kunde={kundenname:x.customer,adresse:x.address||null,telefon:x.phone||null,email:x.email||null,owner_id:currentUser.id};
   if(kundeId){
-    const {error}=await supabaseClient.from('kunden').update(kunde).eq('id',kundeId);
-    if(error)throw error;
+    const {data:updatedKunde,error}=await supabaseClient.from('kunden').update(kunde).eq('id',kundeId).eq('owner_id',currentUser.id).select('*').single();
+    if(error)throw new Error('Kunde konnte nicht aktualisiert werden: '+error.message);
+    kundeId=updatedKunde.id;
   }else{
     kundeId=crypto.randomUUID();
-    const {error}=await supabaseClient.from('kunden').insert({...kunde,id:kundeId});
-    if(error)throw error;
+    const {data:newKunde,error}=await supabaseClient.from('kunden').insert({...kunde,id:kundeId}).select('*').single();
+    if(error)throw new Error('Kunde konnte nicht gespeichert werden: '+error.message);
+    kundeId=newKunde.id;
     x.kundeId=kundeId;
   }
-  const auftrag={kunde_id:kundeId,owner_id:currentUser.id,typ:x.type==='termin'?'Terminvereinbarung':'Angebot',status:x.offerCreated?'Angebot erstellt':'Neu',auftragsdatum:x.date?x.date.slice(0,10):null,beschreibung:x.task,bedenken:x.consider||null,zugang:x.access||null,skt:!!x.skt,hab:!!x.hab,entsorgung_alles:!!x.disposalAll,entsorgung_stammholz:!!x.stammholz,entsorgung_astwerk:!!x.astwerk,entsorgung_hackschnitzel:!!x.hackschnitzel,sonstiges:x.other||null,latitude:x.lat,longitude:x.lon};
-  if(x.id&&x.kundeId){
-    const {error}=await supabaseClient.from('auftraege').update(auftrag).eq('id',x.id);
-    if(error)throw error;
+  const auftrag={kunde_id:kundeId,owner_id:currentUser.id,typ:x.type==='termin'?'Terminvereinbarung':'Angebot',status:x.offerCreated?'Angebot erstellt':'Neu',auftragsdatum:x.date?String(x.date).slice(0,10):null,beschreibung:x.task||'',bedenken:x.consider||null,zugang:x.access||null,skt:!!x.skt,hab:!!x.hab,entsorgung_alles:!!x.disposalAll,entsorgung_stammholz:!!x.stammholz,entsorgung_astwerk:!!x.astwerk,entsorgung_hackschnitzel:!!x.hackschnitzel,sonstiges:x.other||null,latitude:x.lat??null,longitude:x.lon??null};
+  if(x.id){
+    const {data:updated,error}=await supabaseClient.from('auftraege').update(auftrag).eq('id',x.id).eq('owner_id',currentUser.id).select('*').single();
+    if(error)throw new Error('Auftrag konnte nicht aktualisiert werden: '+error.message);
+    x.id=updated.id;
   }else{
-    const auftragId=crypto.randomUUID();
-    const {error}=await supabaseClient.from('auftraege').insert({...auftrag,id:auftragId});
-    if(error)throw error;
-    x.id=auftragId;
+    const {data:created,error}=await supabaseClient.from('auftraege').insert({...auftrag,id:crypto.randomUUID()}).select('*').single();
+    if(error)throw new Error('Auftrag konnte nicht gespeichert werden: '+error.message);
+    x.id=created.id;
   }
   x.createdAt=x.createdAt||Date.now();
   return x;
@@ -93,11 +147,11 @@ function render(){renderApp()}
 function formatInputDate(x){const d=Number.isFinite(x?.createdAt)?new Date(x.createdAt):null;return d&&!isNaN(d.getTime())?d.toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'}):'unbekannt'}
 function filteredOverviewData(){const sorted=data.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));if(overviewFilter==='offen')return sorted.filter(x=>x.type==='angebot'&&!x.offerCreated);if(overviewFilter==='erstellt')return sorted.filter(x=>x.type==='angebot'&&x.offerCreated);return sorted}
 function setOverviewFilter(filter){overviewFilter=filter;renderApp()}
-function home(){const open=data.filter(x=>x.type==="angebot"&&!x.offerCreated).length,done=data.filter(x=>x.type==="angebot"&&x.offerCreated).length,term=data.filter(x=>x.type==="termin").length;const rows=filteredOverviewData();return `<div class="grid"><div class="stat"><span>Offene Angebote</span><b>${open}</b></div><div class="stat"><span>Angebote erstellt</span><b>${done}</b></div></div><div class="card"><div class="row"><h2 style="margin:0">Übersicht</h2><span class="spacer"></span><span class="small">Termine: ${term}</span><button class="secondary" onclick="signOut()">Abmelden</button></div><div class="cloud-status">☁️ Zentral gespeichert · ${esc(currentUser?.email||"")}</div><div class="filterbar"><button class="secondary ${overviewFilter==='alle'?'active':''}" onclick="setOverviewFilter('alle')">Alle</button><button class="secondary ${overviewFilter==='offen'?'active':''}" onclick="setOverviewFilter('offen')">Offen</button><button class="secondary ${overviewFilter==='erstellt'?'active':''}" onclick="setOverviewFilter('erstellt')">Erstellt</button></div>${rows.length?`<div class="overview-list">${rows.map(itemRow).join("")}</div>`:`<p class="small">Keine Datensätze für diesen Filter.</p>`}</div><div class="card"><b>Datensicherung</b><p class="small">Die Daten werden zentral in Supabase gespeichert. Eine lokale Sicherung bleibt zusätzlich möglich.</p><div class="row"><button class="secondary" onclick="exportData()">Daten exportieren</button><button class="secondary" onclick="document.getElementById('importFile').click()">Daten importieren</button><input id="importFile" class="hidden" type="file" accept=".json" onchange="importData(this.files[0])"></div></div>`}
+function home(){const open=data.filter(x=>x.type==="angebot"&&!x.offerCreated).length,done=data.filter(x=>x.type==="angebot"&&x.offerCreated).length,term=data.filter(x=>x.type==="termin").length;const rows=filteredOverviewData();return `<div class="grid"><div class="stat"><span>Offene Angebote</span><b>${open}</b></div><div class="stat"><span>Angebote erstellt</span><b>${done}</b></div></div><div class="card"><div class="row"><h2 style="margin:0">Übersicht</h2><span class="spacer"></span><span class="small">${rows.length} Datensätze geladen · Termine: ${term}</span><button class="secondary" onclick="loadCloud().catch(()=>{})">↻ Datenbank laden</button><button class="secondary" onclick="signOut()">Abmelden</button></div><div class="cloud-status">☁️ Zentral gespeichert · ${esc(currentUser?.email||"")}</div><div class="filterbar"><button class="secondary ${overviewFilter==='alle'?'active':''}" onclick="setOverviewFilter('alle')">Alle</button><button class="secondary ${overviewFilter==='offen'?'active':''}" onclick="setOverviewFilter('offen')">Offen</button><button class="secondary ${overviewFilter==='erstellt'?'active':''}" onclick="setOverviewFilter('erstellt')">Erstellt</button></div>${rows.length?`<div class="overview-list">${rows.map(itemRow).join("")}</div>`:`<p class="small">Keine Datensätze für diesen Filter.</p>`}</div><div class="card"><b>Datensicherung</b><p class="small">Die Daten werden zentral in Supabase gespeichert. Eine lokale Sicherung bleibt zusätzlich möglich.</p><div class="row"><button class="secondary" onclick="exportData()">Daten exportieren</button><button class="secondary" onclick="document.getElementById('importFile').click()">Daten importieren</button><input id="importFile" class="hidden" type="file" accept=".json" onchange="importData(this.files[0])"></div></div>`}
 function customers(){return `<div class="card"><div class="row"><h2 style="margin:0">Kunden & Datensätze</h2><span class="spacer"></span><button class="primary" onclick="showView('new')">＋ Neu</button></div><label>Suche</label><input id="search" placeholder="Name, Telefon, E-Mail, Adresse…" oninput="filterList(this.value)"><div id="list">${data.slice().sort((a,b)=>b.createdAt-a.createdAt).map(itemRow).join("")||`<p class="small">Noch keine Einträge.</p>`}</div></div>`}
 function filterList(q){q=q.toLowerCase();document.querySelectorAll("#list .item").forEach(e=>e.style.display=e.dataset.search.includes(q)?"":"none")}
 function itemRow(x){const q=[x.customer,x.phone,x.email,x.address,x.task,x.consider,x.access,x.other,x.type].join(" ").toLowerCase();const label=x.type==='termin'?'Terminvereinbarung':(x.type==='todo'?'To-do':(x.offerCreated?'Angebot erstellt':'Angebot offen'));const title=x.type==='todo'?'To-do':(x.customer||"Ohne Kundennamen");const dateLine=x.type==='todo'?`Eingabedatum: ${formatInputDate(x)}`:`Eingabedatum: ${formatInputDate(x)}${x.date?' · Termin: '+new Date(x.date).toLocaleString("de-DE",{dateStyle:"medium",timeStyle:"short"}):''}`;return `<div class="item" data-search="${esc(q)}" onclick="showView('detail','${x.id}')"><div class="row"><h3>${esc(title)}</h3><span class="spacer"></span><span class="badge ${x.type==='termin'?'term':(x.offerCreated?'done':'')}">${label}</span></div><div class="meta">${x.type==='todo'?'':`${esc(x.address||"Keine Adresse")} · `}${dateLine}<br>${esc(x.task||"Keine Tätigkeitsbeschreibung")}</div><div class="row" style="margin-top:7px"><span class="spacer"></span><button class="secondary" onclick="event.stopPropagation();showView('new','${x.id}')">Bearbeiten</button></div></div>`}
-function blank(){return {id:crypto.randomUUID(),type:"",customer:"",phone:"",email:"",address:"",date:"",task:"",consider:"",access:"",skt:false,hab:false,disposalAll:false,stammholz:false,astwerk:false,hackschnitzel:false,other:"",offerCreated:false,photos:[],lat:null,lon:null,createdAt:Date.now()}}
+function blank(){return {id:null,type:"",customer:"",phone:"",email:"",address:"",date:"",task:"",consider:"",access:"",skt:false,hab:false,disposalAll:false,stammholz:false,astwerk:false,hackschnitzel:false,other:"",offerCreated:false,photos:[],lat:null,lon:null,createdAt:Date.now()}}
 function form(x){x=x||blank();if(!x.type&&newType)x.type=newType;draftLocation={lat:x.lat,lon:x.lon};draftPhotos=Array.isArray(x.photos)?x.photos.slice():[];if(x.type==='todo')return `<div class="card"><div class="row"><h2 style="margin:0">${editId?"To-do bearbeiten":"Neues To-do"}</h2><span class="spacer"></span><button class="secondary" onclick="showView(editId?'detail':'home',editId)">Abbrechen</button></div><div class="section-title">To-do</div><p class="hint">Für ein To-do wird nur der Text erfasst.</p><label>Aufgabe <span class="required">*</span></label><textarea id="f_todo" placeholder="To-do eingeben …">${esc(x.task)}</textarea><hr><button class="primary" style="width:100%" onclick='saveForm(${JSON.stringify(x).replace(/</g,"\u003c")})'>💾 To-do speichern</button>${editId?`<button class="danger" style="width:100%;margin-top:8px" onclick="deleteItem('${x.id}')">To-do löschen</button>`:""}</div>`;if(!x.type&&!editId)return `<div class="card"><div class="row"><h2 style="margin:0">Neuen Datensatz erstellen</h2><span class="spacer"></span><button class="secondary" onclick="showView('home')">Abbrechen</button></div><div class="section-title">Wofür werden die Daten benötigt? <span class="required">*</span></div><p class="hint">Bitte zuerst auswählen. Erst danach werden die Eingabefelder angezeigt.</p><div class="type-grid"><div class="type-card offer" onclick="chooseType('angebot')"><b>📋 Angebot</b><span class="small">Kundendaten und Leistungsumfang für ein Angebot erfassen</span></div><div class="type-card term" onclick="chooseType('termin')"><b>📅 Terminvereinbarung</b><span class="small">Termin und Kundendaten erfassen</span></div><div class="type-card term" onclick="chooseType('todo')"><b>☑️ To-do</b><span class="small">Einfaches To-do als Text erfassen</span></div></div></div>`;return `<div class="card"><div class="row"><h2 style="margin:0">${editId?"Datensatz bearbeiten":"Neuen Datensatz erstellen"}</h2><span class="spacer"></span><button class="secondary" onclick="showView(editId?'detail':'home',editId)">Abbrechen</button></div><div class="section-title">1. Wofür werden die Daten benötigt? <span class="required">*</span></div><div class="type-grid"><div class="type-card ${x.type==='termin'?'selected':''}" onclick="chooseType('termin')"><b>📅 Terminvereinbarung</b><span class="small">Kundentermin erfassen</span></div><div class="type-card ${x.type==='angebot'?'selected':''}" onclick="chooseType('angebot')"><b>📋 Angebot</b><span class="small">Daten für ein Angebot erfassen</span></div><div class="type-card ${x.type==='todo'?'selected':''}" onclick="chooseType('todo')"><b>☑️ To-do</b><span class="small">Nur einen Text erfassen</span></div></div><input id="f_type" type="hidden" value="${esc(x.type)}"><div class="section-title">2. Kundendaten</div><label>Kundenname <span class="required">*</span></label><input id="f_customer" value="${esc(x.customer)}" autocomplete="name"><label>Adresse</label><input id="f_address" value="${esc(x.address)}" autocomplete="street-address"><div class="row" style="margin-top:8px"><button class="secondary" onclick="getLocation()">📍 Standort übernehmen</button><button class="secondary" onclick="openMaps()">🗺️ Adresse in Karten</button></div><div id="locationStatus" class="location-ok">${draftLocation.lat?"✓ Standort übernommen":""}</div><label>Telefonnummer</label><input id="f_phone" value="${esc(x.phone)}" type="tel" autocomplete="tel"><label>E-Mail-Adresse</label><input id="f_email" value="${esc(x.email)}" type="email" autocomplete="email"><div id="appointmentBlock" class="${x.type==='termin'?'':'hidden'}"><label>Termin</label><input id="f_date" value="${esc(x.date)}" type="datetime-local"><div class="hint">Bei einer Terminvereinbarung bitte den gewünschten Termin eintragen.</div></div><div class="section-title">3. Einsatz</div><label>Was ist zu tun? <span class="required">*</span></label><textarea id="f_task" placeholder="Beschreibung der Arbeiten">${esc(x.task)}</textarea><label>Was ist zu bedenken?</label><textarea id="f_consider" placeholder="Besonderheiten, Gefahren, Wünsche, Hinweise…">${esc(x.consider)}</textarea><label>Zugang</label><textarea id="f_access" placeholder="Zugang zum Grundstück / Baum, Zufahrt, Engstellen, Schlüssel usw.">${esc(x.access)}</textarea><label>Zugang / Arbeitsmittel</label><div class="checks"><label class="check"><input id="f_skt" type="checkbox" ${x.skt?'checked':''}> SKT</label><label class="check"><input id="f_hab" type="checkbox" ${x.hab?'checked':''}> HAB</label></div><label>Entsorgung</label><div class="hint">„Alles“ setzt Stammholz, Astwerk und Hackschnitzel gemeinsam.</div><div class="checks"><label class="check"><input id="f_all" type="checkbox" ${x.disposalAll?'checked':''} onchange="toggleAllDisposal(this.checked)"> Alles</label><label class="check"><input id="f_stamm" type="checkbox" ${x.stammholz?'checked':''} onchange="individualDisposalChanged()"> Stammholz</label><label class="check"><input id="f_ast" type="checkbox" ${x.astwerk?'checked':''} onchange="individualDisposalChanged()"> Astwerk</label><label class="check"><input id="f_hack" type="checkbox" ${x.hackschnitzel?'checked':''} onchange="individualDisposalChanged()"> Hackschnitzel</label></div><label>Sonstiges</label><textarea id="f_other" placeholder="Weitere Angaben">${esc(x.other)}</textarea><label>Fotos</label><div class="row"><button type="button" class="secondary" onclick="document.getElementById('f_photos').click()">📷 Foto hinzufügen</button><span id="photoCount" class="small">${(x.photos||[]).length} Foto(s)</span></div><input id="f_photos" class="hidden" type="file" accept="image/*" capture="environment" onchange="addSelectedPhotos(this)"><div class="hint">Du kannst nacheinander beliebig viele Fotos aufnehmen oder aus der Mediathek auswählen. Alle Fotos werden beim Speichern zusammen mit dem Datensatz abgelegt.</div><div id="photoPreview" class="photo-grid">${(x.photos||[]).map((p,i)=>`<div class="photo-item"><img src="${p}"><button type="button" aria-label="Foto entfernen" onclick="removePhoto(${i})">×</button></div>`).join("")}</div><input id="f_offer" type="hidden" value="false"><hr><button class="primary" style="width:100%" onclick='saveForm(${JSON.stringify(x).replace(/</g,"\\u003c")})'>💾 Daten speichern</button>${editId?`<button class="danger" style="width:100%;margin-top:8px" onclick="deleteItem('${x.id}')">Datensatz löschen</button>`:""}<p class="small">Die Daten werden zentral in Supabase gespeichert.</p></div>`}
 function chooseType(t){if(editId){setType(t);return}newType=t;renderApp()}
 function setType(t){const el=document.getElementById('f_type');if(el)el.value=t;document.querySelectorAll('.type-card').forEach(e=>e.classList.remove('selected'));const idx=t==='termin'?0:(t==='angebot'?1:2);document.querySelectorAll('.type-card')[idx]?.classList.add('selected');document.getElementById('appointmentBlock')?.classList.toggle('hidden',t!=='termin');const offer=document.getElementById('f_offer');if(t==='angebot'&&offer?.type==='checkbox'){}else if(offer)offer.value='false'}
@@ -124,11 +178,16 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(
   }catch(e){console.error('Supabase Auth:',e);currentUser=null;}
   authReady=true;
   renderApp();
-  if(currentUser)await loadCloud();
+  if(currentUser){
+    try{await loadCloud()}catch(e){console.error(e)}
+  }
 })();
 supabaseClient.auth.onAuthStateChange((_event,session)=>{
   currentUser=session?.user||null;
-  if(authReady){renderApp();if(currentUser)loadCloud();}
+  if(authReady){
+    renderApp();
+    if(currentUser)loadCloud().catch(e=>console.error(e));
+  }
 });
 </script>
 </body>
