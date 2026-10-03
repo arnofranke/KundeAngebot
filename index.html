@@ -56,23 +56,30 @@ async function loadCloud(){
   try{
     await ensureCurrentUser();
     const claim=await claimLegacyCloudData();
-    const [kundenResult,auftragResult]=await Promise.all([
+    const [kundenResult,auftragResult,todoResult]=await Promise.all([
       supabaseClient.from('kunden').select('*').eq('owner_id',currentUser.id),
-      supabaseClient.from('auftraege').select('*').eq('owner_id',currentUser.id)
+      supabaseClient.from('auftraege').select('*').eq('owner_id',currentUser.id),
+      supabaseClient.from('todos').select('*').eq('owner_id',currentUser.id)
     ]);
     if(kundenResult.error)throw new Error('Kundendaten: '+kundenResult.error.message);
     if(auftragResult.error)throw new Error('Auftragsdaten: '+auftragResult.error.message);
+    if(todoResult.error)throw new Error('To-do-Datenbank: '+todoResult.error.message);
     const kundenMap=new Map((kundenResult.data||[]).map(k=>[k.id,k]));
     const rows=(auftragResult.data||[]).slice().sort((a,b)=>{
       const ta=a.erstellt_am?new Date(a.erstellt_am).getTime():0;
       const tb=b.erstellt_am?new Date(b.erstellt_am).getTime():0;
       return tb-ta;
     });
-    data=rows.map(r=>fromDb({...r,kunden:kundenMap.get(r.kunde_id)||{}}));
+    const mappedAuftraege=rows.map(r=>fromDb({...r,kunden:kundenMap.get(r.kunde_id)||{}}));
+    const todos=(todoResult.data||[]).map(fromTodoDb);
+    const todoIds=new Set(todos.map(x=>x.id));
+    const legacyTodos=mappedAuftraege.filter(x=>x.type==='todo'&&!todoIds.has(x.id));
+    const auftraege=mappedAuftraege.filter(x=>x.type!=='todo');
+    data=[...auftraege,...todos,...legacyTodos].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
     save();
     renderApp();
-    const kc=Number(claim?.kunden_claimed||0),ac=Number(claim?.auftraege_claimed||0);
-    if(kc||ac)toast(`Alte Daten übernommen: ${kc} Kunden · ${ac} Datensätze`);
+    const kc=Number(claim?.kunden_claimed||0),ac=Number(claim?.auftraege_claimed||0),tc=Number(claim?.todos_claimed||0);
+    if(kc||ac||tc)toast(`Alte Daten übernommen: ${kc} Kunden · ${ac} Datensätze · ${tc} To-dos`);
     return data;
   }catch(error){
     console.error('Supabase-Laden fehlgeschlagen:',error);
@@ -87,19 +94,26 @@ function fromDb(r){
   const created=r.erstellt_am?new Date(r.erstellt_am).getTime():(r.auftragsdatum?new Date(r.auftragsdatum).getTime():Date.now());
   return {id:r.id,type,customer:k.kundenname||'',phone:k.telefon||'',email:k.email||'',address:k.adresse||'',date:r.auftragsdatum||'',task:r.beschreibung||'',consider:r.bedenken||'',access:r.zugang||'',skt:!!r.skt,hab:!!r.hab,disposalAll:!!r.entsorgung_alles,stammholz:!!r.entsorgung_stammholz,astwerk:!!r.entsorgung_astwerk,hackschnitzel:!!r.entsorgung_hackschnitzel,other:r.sonstiges||'',offerCreated:r.status==='Angebot erstellt',photos:[],lat:r.latitude??null,lon:r.longitude??null,createdAt:Number.isFinite(created)?created:Date.now(),kundeId:r.kunde_id||null};
 }
+function fromTodoDb(r){
+  const created=r.erstellt_am?new Date(r.erstellt_am).getTime():Date.now();
+  return {id:r.id,type:'todo',customer:'',phone:'',email:'',address:'',date:'',task:r.aufgabe||'',consider:'',access:'',skt:false,hab:false,disposalAll:false,stammholz:false,astwerk:false,hackschnitzel:false,other:'',offerCreated:false,photos:[],lat:null,lon:null,createdAt:Number.isFinite(created)?created:Date.now(),kundeId:null};
+}
 async function saveCloud(x){
   await ensureCurrentUser();
   if(x.type==='todo'){
     const isNew=!x.id;
-    const auftragId=x.id||crypto.randomUUID();
-    const auftrag={id:auftragId,kunde_id:null,owner_id:currentUser.id,typ:'To-do',status:'Neu',auftragsdatum:null,beschreibung:x.task||'',bedenken:null,zugang:null,skt:false,hab:false,entsorgung_alles:false,entsorgung_stammholz:false,entsorgung_astwerk:false,entsorgung_hackschnitzel:false,sonstiges:null,latitude:null,longitude:null};
+    const todoId=x.id||crypto.randomUUID();
+    const todo={id:todoId,owner_id:currentUser.id,aufgabe:x.task||'',status:'Neu'};
     const q=isNew
-      ?supabaseClient.from('auftraege').insert(auftrag)
-      :supabaseClient.from('auftraege').update(auftrag).eq('id',auftragId).eq('owner_id',currentUser.id);
+      ?supabaseClient.from('todos').insert(todo)
+      :supabaseClient.from('todos').update(todo).eq('id',todoId).eq('owner_id',currentUser.id);
     const {data:row,error}=await q.select('*').single();
     if(error)throw new Error('To-do konnte nicht gespeichert werden: '+error.message);
     x.id=row.id;
-    x.createdAt=x.createdAt||Date.now();
+    if(row.erstellt_am){
+      const t=new Date(row.erstellt_am).getTime();
+      if(Number.isFinite(t))x.createdAt=t;
+    }
     return x;
   }
   let kundeId=x.kundeId||null;
@@ -128,7 +142,18 @@ async function saveCloud(x){
   x.createdAt=x.createdAt||Date.now();
   return x;
 }
-async function deleteCloud(x){if(x?.id){const {error}=await supabaseClient.from('auftraege').delete().eq('id',x.id);if(error)throw error}}
+async function deleteCloud(x){
+  if(!x?.id)return;
+  if(x.type==='todo'){
+    const {error:todoError}=await supabaseClient.from('todos').delete().eq('id',x.id).eq('owner_id',currentUser.id);
+    if(todoError)throw todoError;
+    const {error:legacyError}=await supabaseClient.from('auftraege').delete().eq('id',x.id).eq('owner_id',currentUser.id);
+    if(legacyError)throw legacyError;
+    return;
+  }
+  const {error}=await supabaseClient.from('auftraege').delete().eq('id',x.id).eq('owner_id',currentUser.id);
+  if(error)throw error;
+}
 function renderApp(){
   const app=document.getElementById('app');
   if(!authReady){app.innerHTML='<div class="card"><h2>KundenAngebot</h2><p class="small">Verbindung wird vorbereitet …</p></div>';return;}
