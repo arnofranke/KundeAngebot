@@ -215,7 +215,7 @@ async function getLocation(){if(!navigator.geolocation){alert('Standort ist auf 
 function openMaps(address=''){if(!address)address=document.getElementById('f_address')?.value||'';if(!address){alert('Bitte zuerst eine Adresse eingeben.');return}location.href='https://maps.apple.com/?address='+encodeURIComponent(address)}
 function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='KundenAngebot-Sicherung-'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(a.href)}
 function importData(file){if(!file)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d))throw 0;if(confirm('Import ersetzt die aktuell gespeicherten Daten. Fortfahren?')){data=d;save();render();toast('Import abgeschlossen')}}catch(e){alert('Die Datei ist keine gültige Sicherung.')}};r.readAsText(file)}
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=20261006-1').then(reg=>reg.update()).catch(()=>{});
 (async()=>{
   try{
     const {data:{session}}=await supabaseClient.auth.getSession();
