@@ -1,4 +1,4 @@
-const CACHE="kundenangebot-v19-20261006-1";
+const CACHE="kundenangebot-v19-20261019-2";
 const APP_SHELL=["./","./index.html","./manifest.json","./logo.png","./icon-180.png","./icon-512.png"];
 
 self.addEventListener("install", event => {
@@ -24,8 +24,6 @@ self.addEventListener("fetch", event => {
   const isAppDocument = event.request.mode === "navigate" || url.pathname.endsWith("/index.html");
 
   if (isAppDocument) {
-    // Für HTML immer zuerst den Server fragen. Dadurch wird auf GitHub Pages
-    // nicht dauerhaft eine alte index.html aus dem iPhone-Cache verwendet.
     event.respondWith(
       fetch(event.request, { cache: "no-store" })
         .then(response => {
