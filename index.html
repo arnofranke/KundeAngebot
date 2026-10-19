@@ -83,16 +83,18 @@ async function loadCloud(){
   try{
     await ensureCurrentUser();
     const claim=await claimLegacyCloudData();
-    const [kundenResult,auftragResult,todoResult,todoFotoResult]=await Promise.all([
+    const [kundenResult,auftragResult,todoResult,todoFotoResult,fotoResult]=await Promise.all([
       supabaseClient.from('kunden').select('*').eq('owner_id',currentUser.id),
       supabaseClient.from('auftraege').select('*').eq('owner_id',currentUser.id),
       supabaseClient.from('todos').select('*').eq('owner_id',currentUser.id),
-      supabaseClient.from('todo_fotos').select('*').eq('owner_id',currentUser.id)
+      supabaseClient.from('todo_fotos').select('*').eq('owner_id',currentUser.id),
+      supabaseClient.from('fotos').select('*').eq('owner_id',currentUser.id)
     ]);
     if(kundenResult.error)throw new Error('Kundendaten: '+kundenResult.error.message);
     if(auftragResult.error)throw new Error('Auftragsdaten: '+auftragResult.error.message);
     if(todoResult.error)throw new Error('To-do-Datenbank: '+todoResult.error.message);
     if(todoFotoResult.error)throw new Error('To-do-Fotos: '+todoFotoResult.error.message);
+    if(fotoResult.error)throw new Error('Angebotsfotos: '+fotoResult.error.message);
     const todoPhotosMap=new Map();
     (todoFotoResult.data||[]).forEach(p=>{const arr=todoPhotosMap.get(p.todo_id)||[];arr.push(p.foto_data);todoPhotosMap.set(p.todo_id,arr)});
     const kundenMap=new Map((kundenResult.data||[]).map(k=>[k.id,k]));
@@ -101,7 +103,9 @@ async function loadCloud(){
       const tb=b.erstellt_am?new Date(b.erstellt_am).getTime():0;
       return tb-ta;
     });
-    const mappedAuftraege=rows.map(r=>fromDb({...r,kunden:kundenMap.get(r.kunde_id)||{}}));
+    const fotosMap=new Map();
+    (fotoResult.data||[]).forEach(p=>{const arr=fotosMap.get(p.auftrag_id)||[];if(typeof p.speicherpfad==='string'&&p.speicherpfad.startsWith('data:image/'))arr.push(p.speicherpfad);fotosMap.set(p.auftrag_id,arr)});
+    const mappedAuftraege=rows.map(r=>({...fromDb({...r,kunden:kundenMap.get(r.kunde_id)||{}}),photos:fotosMap.get(r.id)||[]}));
     const todos=(todoResult.data||[]).map(r=>fromTodoDb(r,todoPhotosMap.get(r.id)||[]));
     const todoIds=new Set(todos.map(x=>x.id));
     const legacyTodos=mappedAuftraege.filter(x=>x.type==='todo'&&!todoIds.has(x.id));
@@ -184,6 +188,20 @@ async function saveCloud(x){
     if(error)throw new Error('Auftrag konnte nicht gespeichert werden: '+error.message);
     x.id=created.id;
   }
+  // Fotos werden als verkleinerte Data-URLs in public.fotos.speicherpfad abgelegt.
+  // Dadurch funktioniert die Fotoablage ohne zusätzlichen Storage-Bucket.
+  const photos=Array.isArray(x.photos)?x.photos.filter(p=>typeof p==='string'&&p.startsWith('data:image/')):[];
+  const {error:deleteFotosError}=await supabaseClient.from('fotos').delete().eq('auftrag_id',x.id).eq('owner_id',currentUser.id);
+  if(deleteFotosError)throw new Error('Vorhandene Angebotsfotos konnten nicht aktualisiert werden: '+deleteFotosError.message);
+  if(photos.length){
+    const rows=photos.map((speicherpfad,i)=>({auftrag_id:x.id,owner_id:currentUser.id,dateiname:`foto-${i+1}.jpg`,speicherpfad}));
+    const {error:fotosError}=await supabaseClient.from('fotos').insert(rows);
+    if(fotosError)throw new Error('Angebotsfotos konnten nicht gespeichert werden: '+fotosError.message);
+    const {data:verifyFotos,error:verifyError}=await supabaseClient.from('fotos').select('id').eq('auftrag_id',x.id).eq('owner_id',currentUser.id);
+    if(verifyError)throw new Error('Angebotsfotos konnten nicht geprüft werden: '+verifyError.message);
+    if((verifyFotos||[]).length!==photos.length)throw new Error('Nicht alle Angebotsfotos wurden in Supabase gespeichert.');
+  }
+  x.photos=photos;
   x.createdAt=x.createdAt||Date.now();
   return x;
 }
